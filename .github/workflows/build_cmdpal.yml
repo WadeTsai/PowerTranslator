@@ -3,6 +3,10 @@ name: BuildCmdPal
 on:
   release:
     types: created
+
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
