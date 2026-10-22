@@ -15,7 +15,7 @@ Set-StrictMode -Version Latest
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw '需要管理员权限以修改 LocalMachine\\TrustedPeople。'
+    throw '需要管理員權限以修改 LocalMachine\\TrustedPeople。'
 }
 
 $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($CertificatePath)

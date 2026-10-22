@@ -11,7 +11,7 @@ public class UtilsFunTests
         public int Value { get; set; }
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(null, false)]
     [DataRow("", false)]
     [DataRow("hello", true)]
@@ -45,15 +45,30 @@ public class UtilsFunTests
     }
 
     [TestMethod]
-    public void FormDataHelpers_UseEveryPublicProperty()
+    public void ToFormString_JoinsPairsInOrder()
     {
-        var body = new { Query = "hello", Target = "en" }.toFormDataBodyString();
-        var uri = "https://example.test/api".addQueryParameters(
-            new { Query = "hello" },
-            new { Target = "en" });
+        KeyValuePair<string, string>[] pairs = [new("Query", "hello"), new("Target", "en")];
 
-        Assert.AreEqual("Query=hello&Target=en", body);
-        Assert.AreEqual("https://example.test/api?Query=hello&Target=en", uri);
+        Assert.AreEqual("Query=hello&Target=en", pairs.ToFormString());
+    }
+
+    [TestMethod]
+    public void ToFormString_EncodesReservedCharacters()
+    {
+        KeyValuePair<string, string>[] pairs = [new("q", "rock & roll=1+1"), new("kw", "你好")];
+
+        Assert.AreEqual("q=rock%20%26%20roll%3D1%2B1&kw=%E4%BD%A0%E5%A5%BD", pairs.ToFormString());
+    }
+
+    [TestMethod]
+    public async Task ToFormContent_UsesFormUrlEncodedContentType()
+    {
+        KeyValuePair<string, string>[] pairs = [new("a", "b c")];
+
+        using var content = pairs.ToFormContent();
+
+        Assert.AreEqual("application/x-www-form-urlencoded", content.Headers.ContentType?.MediaType);
+        Assert.AreEqual("a=b%20c", await content.ReadAsStringAsync());
     }
 
     [TestMethod]
@@ -74,7 +89,7 @@ public class UtilsFunTests
         CollectionAssert.AreEqual(new[] { "a", "b", "c" }, result.Select(value => value.item).ToArray());
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("camelCase", "camel Case")]
     [DataRow("PascalCase", "Pascal Case")]
     [DataRow("snake_case", "snake case")]

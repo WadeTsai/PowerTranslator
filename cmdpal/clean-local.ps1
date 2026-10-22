@@ -19,7 +19,7 @@ $trustManager = Join-Path $PSScriptRoot 'manage-local-cert-trust.ps1'
 if (Test-Path $certificatePath) {
     $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certificatePath)
     if (-not (Test-Path $trustManager)) {
-        throw "找不到证书信任管理脚本：$trustManager"
+        throw "找不到證書信任管理指令碼：$trustManager"
     }
     $trustArgs = @(
         '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$trustManager`"",
@@ -27,7 +27,7 @@ if (Test-Path $certificatePath) {
     )
     $trustProcess = Start-Process -FilePath 'pwsh' -Verb RunAs -Wait -PassThru -ArgumentList $trustArgs
     if ($trustProcess.ExitCode -ne 0) {
-        throw "移除 LocalMachine\\TrustedPeople 信任失败，退出码 $($trustProcess.ExitCode)。"
+        throw "移除 LocalMachine\\TrustedPeople 信任失敗，退出碼 $($trustProcess.ExitCode)。"
     }
     foreach ($store in @('Root', 'TrustedPeople')) {
         & "$env:SystemRoot\System32\certutil.exe" -user -delstore $store $certificate.Thumbprint *> $null
@@ -40,12 +40,12 @@ if (Test-Path $certificatePath) {
     foreach ($legacyCertificate in $legacyCertificates) {
         & "$env:SystemRoot\System32\certutil.exe" -user -delstore My $legacyCertificate.Thumbprint *> $null
     }
-    Write-Host '已移除本地开发证书信任。' -ForegroundColor DarkGray
+    Write-Host '已移除本地開發證書信任。' -ForegroundColor DarkGray
 }
 
 if (Test-Path $certificateDir) {
     Remove-Item -Path $certificateDir -Recurse -Force
-    Write-Host '已删除 cmdpal/.local-cert。' -ForegroundColor DarkGray
+    Write-Host '已刪除 cmdpal/.local-cert。' -ForegroundColor DarkGray
 } else {
-    Write-Host '未找到本地开发证书文件，无需清理。' -ForegroundColor DarkGray
+    Write-Host '未找到本地開發證書檔案，無需清理。' -ForegroundColor DarkGray
 }

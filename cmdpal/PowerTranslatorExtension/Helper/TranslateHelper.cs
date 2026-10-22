@@ -25,14 +25,22 @@ public class TranslateHelper
         public string toLan;
     }
     public const string toLanSplit = "->";
-    public bool inited => this.translators.Count > 0 && this.translators[0].Inited;
-    private object initLock = new Object();
-    private readonly object translateLock = new();
+    // Usable as soon as any translator is ready; the others keep retrying in the background.
+    public bool inited => this.translators.Any(t => t.Inited);
+    private bool allInited => this.translators.All(t => t.Inited);
+    // How long a query waits for an in-flight initialization before showing the "initializing" placeholder.
+    private static readonly TimeSpan initWaitTimeout = TimeSpan.FromSeconds(5);
+    private readonly object initLock = new();
+    // Translations share the read lock so the main and second-language queries run concurrently;
+    // Reload takes the write lock so no request uses a client while it is being replaced.
+    private readonly ReaderWriterLockSlim translateLock = new();
+    private Task<bool>? initTask;
     private long lastInitTime;
     private List<ITranslator> translators;
     private readonly Func<bool> isCodeModeEnabled;
+    private readonly ITranslator? cambridgeTranslator;
+    private readonly Func<bool> isCambridgeEnabled;
     private bool isSpeaking;
-    private bool isIniting;
     public string defaultLanguageKey = "auto";
     private Middleware.Alias.CultureAliasMiddleware cultureAliasHelper = new(
         new Dictionary<string, string>{
@@ -49,7 +57,9 @@ public class TranslateHelper
                 new Service.Youdao.Backup.BackUpTranslator(),
             ],
             defaultLanguageKey,
-            () => SettingsManager.Instance.EnableCodeMode)
+            () => SettingsManager.Instance.EnableCodeMode,
+            new Service.Cambridge.CambridgeTranslator(),
+            () => SettingsManager.Instance.UseCambridgeTraditional)
     {
         UtilsFun.onHttpDefaultHandlerChange += this.Reload;
     }
@@ -57,7 +67,9 @@ public class TranslateHelper
     internal TranslateHelper(
         IEnumerable<ITranslator> translators,
         string defaultLanguageKey,
-        Func<bool> isCodeModeEnabled)
+        Func<bool> isCodeModeEnabled,
+        ITranslator? cambridgeTranslator = null,
+        Func<bool>? isCambridgeEnabled = null)
     {
         ArgumentNullException.ThrowIfNull(translators);
         ArgumentNullException.ThrowIfNull(isCodeModeEnabled);
@@ -65,6 +77,8 @@ public class TranslateHelper
         this.translators = translators.ToList();
         this.defaultLanguageKey = defaultLanguageKey;
         this.isCodeModeEnabled = isCodeModeEnabled;
+        this.cambridgeTranslator = cambridgeTranslator;
+        this.isCambridgeEnabled = isCambridgeEnabled ?? (() => false);
     }
 
     public TranslateTarget ParseRawSrc(string src)
@@ -93,27 +107,44 @@ public class TranslateHelper
             toLan = cultureAliasHelper.GetCultureFromAlias(_toLan)
         };
     }
+    private ITranslateResult? TranslateWithCambridge(string text, string toLan)
+    {
+        if (cambridgeTranslator == null || !isCambridgeEnabled())
+            return null;
+        try
+        {
+            return cambridgeTranslator.Translate(text, toLan, "en");
+        }
+        catch (Exception err)
+        {
+            UtilsFun.LogMessage($"{cambridgeTranslator.Name}: {err.Message}");
+            return null;
+        }
+    }
     private ITranslateResult? Translate(string text, string toLan)
     {
-        lock (translateLock)
+        translateLock.EnterReadLock();
+        try
         {
-            return translators.Enumerate().FirstNotNoneCast((data) =>
+            var cambridgeResult = TranslateWithCambridge(text, toLan);
+            if (cambridgeResult != null)
+                return cambridgeResult;
+            return translators.FirstNotNoneCast((it) =>
             {
-                var (idx, it) = data;
                 try
                 {
-                    if (it == null)
-                    {
-                        throw new InvalidOperationException($"Translator at index {idx} is null");
-                    }
-                    return it?.Translate(text, toLan, "auto");
+                    return it.Translate(text, toLan, "auto");
                 }
                 catch (Exception err)
                 {
-                    UtilsFun.LogMessage(err.Message);
+                    UtilsFun.LogMessage($"{it.Name}: {err.Message}");
                     return null;
                 }
             });
+        }
+        finally
+        {
+            translateLock.ExitReadLock();
         }
     }
     public List<ResultItem> QueryTranslate(string raw, string? toLanguage = null)
@@ -122,18 +153,14 @@ public class TranslateHelper
         if (raw.Length == 0)
             return res;
 
+        if (!allInited)
+        {
+            var init = WarmUp();
+            if (!inited)
+                init.Wait(initWaitTimeout);
+        }
         if (!inited)
         {
-            if (!this.isIniting)
-            {
-                Task.Factory.StartNew(() =>
-                {
-                    if (this.InitTranslator())
-                    {
-                        // this.publicAPI?.ChangeQuery(raw, true);
-                    }
-                });
-            }
             res.Add(new ResultItem
             {
                 Title = Loc.Get("Status_Initializing_Title"),
@@ -170,72 +197,57 @@ public class TranslateHelper
 
         return res;
     }
-    private bool InitTranslator()
+    /// <summary>
+    /// Starts initializing the translators in the background (or returns the in-flight attempt).
+    /// Called at startup so the first query does not pay for the key exchange.
+    /// </summary>
+    public Task<bool> WarmUp()
     {
-        var now = UtilsFun.GetUtcTimeNow();
-        if (now - this.lastInitTime < 1000 * 30 || this.inited || this.isIniting)
-            return false;
-        lock (this.initLock)
+        lock (initLock)
         {
-            this.isIniting = true;
-            this.lastInitTime = now;
-            UtilsFun.LogMessage("custom init");
+            if (allInited)
+                return Task.FromResult(true);
+            if (initTask is { IsCompleted: false })
+                return initTask;
+            // Retry failed initializations at most every 30 seconds.
+            var now = UtilsFun.GetUtcTimeNow();
+            if (initTask != null && now - lastInitTime < 1000 * 30)
+                return initTask;
+            lastInitTime = now;
+            initTask = Task.Run(InitTranslators);
+            return initTask;
+        }
+    }
 
-            var actions = translators.Select((translator, idx) =>
-            {
-                return Task.Factory.StartNew(() =>
-                {
-                    if (translator.Inited)
-                    {
-                        return;
-                    }
-                    try
-                    {
-                        UtilsFun.LogMessage($"start init {translator.Name}");
-                        translator.Init();
-                        UtilsFun.LogMessage($"init {translator.Name} success: {translator.Inited}");
-                    }
-                    catch (Exception ex)
-                    {
-                        UtilsFun.LogMessage($"Init {translator.Name} Error occurred: {(ex.InnerException ?? ex).Message}");
-                    }
-                });
-            });
-
+    private bool InitTranslators()
+    {
+        UtilsFun.LogMessage("custom init");
+        var actions = translators.Where(t => !t.Inited).Select(translator => Task.Run(() =>
+        {
             try
             {
-                Task.WhenAll(actions).GetAwaiter().GetResult();
+                UtilsFun.LogMessage($"start init {translator.Name}");
+                translator.Init();
+                UtilsFun.LogMessage($"init {translator.Name} success: {translator.Inited}");
             }
-            catch (AggregateException ex)
+            catch (Exception ex)
             {
-                // 捕获并处理 Task.WhenAll 返回的聚合异常
-                foreach (Exception innerException in ex.InnerExceptions)
-                {
-                    UtilsFun.LogMessage($"Error occurred during task execution: {innerException.Message}");
-                }
-                return false;
+                UtilsFun.LogMessage($"Init {translator.Name} Error occurred: {(ex.InnerException ?? ex).Message}");
             }
-            catch (Exception err)
-            {
-                UtilsFun.LogMessage($"Error occurred: {err.Message}");
-                return false;
-            }
-            finally
-            {
-                this.isIniting = false;
-                UtilsFun.LogMessage("custom init complete");
-            }
-            return true;
-        }
+        })).ToArray();
+        Task.WaitAll(actions);
+        UtilsFun.LogMessage("custom init complete");
+        return inited;
     }
 
     public void Reload()
     {
         Task.Factory.StartNew(() =>
         {
-            lock (translateLock)
+            translateLock.EnterWriteLock();
+            try
             {
-                foreach (var translator in translators)
+                foreach (var translator in cambridgeTranslator == null ? translators : translators.Append(cambridgeTranslator))
                 {
                     try
                     {
@@ -246,6 +258,10 @@ public class TranslateHelper
                         UtilsFun.LogMessage($"Reset {translator.Name} failed: {ex.Message}");
                     }
                 }
+            }
+            finally
+            {
+                translateLock.ExitWriteLock();
             }
         });
     }

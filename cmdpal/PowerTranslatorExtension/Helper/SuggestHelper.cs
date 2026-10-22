@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using PowerTranslatorExtension.Protocol;
 using PowerTranslatorExtension.Utils;
 
@@ -39,15 +38,13 @@ public class SuggestHelper
 
     public List<ResultItem> QuerySuggest(string query)
     {
-        var body = new { kw = query }.toFormDataBodyString();
+        KeyValuePair<string, string>[] body = [new("kw", query)];
         try
         {
-            var res = client.PostAsync(
-                "https://fanyi.baidu.com/sug",
-                new StringContent(body, new MediaTypeHeaderValue("application/x-www-form-urlencoded")))
+            var res = client.PostAsync("https://fanyi.baidu.com/sug", body.ToFormContent())
                 .GetAwaiter().GetResult();
             var raw = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            var sug = UtilsFun.ParseJson<SuggestInterface>(raw);
+            var sug = UtilsFun.ParseJson(raw, Protocol.TranslatorJsonContext.Default.SuggestInterface);
             if (sug == null || sug.data == null || sug.data.Length == 0)
                 return new List<ResultItem>();
             var result = new List<ResultItem>(sug.data.Length);

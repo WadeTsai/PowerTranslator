@@ -26,6 +26,7 @@ public partial class PowerTranslatorExtensionCommandsProvider : CommandProvider
         };
 
         this.translateHelper = new TranslateHelper(SettingsManager.Instance.DefaultLanguageKey);
+        _ = this.translateHelper.WarmUp();
         this.suggestHelper = new SuggestHelper();
         var mainPage = new PowerTranslatorExtensionPage(translateHelper, suggestHelper);
         var historyPage = new HistoryPage(translateHelper);

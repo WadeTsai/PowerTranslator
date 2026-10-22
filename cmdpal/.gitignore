@@ -2,3 +2,6 @@
 .vscode
 **/bin
 **/obj
+# MSIX packaging output
+AppPackages/
+BundleArtifacts/

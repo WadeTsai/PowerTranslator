@@ -1,8 +1,6 @@
-using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Translator.Protocol;
 using Translator.Service.Youdao.Utils;
@@ -149,169 +147,104 @@ public class TranslateResponse : ITranslateResult
 
 public class YoudaoTranslator : ITranslator
 {
+    private static readonly byte[] encryptKey = MD5.HashData(Encoding.UTF8.GetBytes("ydsecret://query/key/B*RGygVywfNBwpmBaZg*WT7SIOUP2T0C9WHMZN39j^DAdaZhAnxvGcCY6VYFwnHl"));
+    private static readonly byte[] iv = MD5.HashData(Encoding.UTF8.GetBytes("ydsecret://query/iv/C@lZe2YzHtZ2CYgaXKSVfsb7Y4QWHjITPPZ0nQp87fBeJ!Iv6v^6fvi2WN@bYpJ4"));
     private HttpClient client;
-    private Random random;
-    private string? secretKey;
-    private MD5 md5;
-    private byte[]? encryptKey;
-    private byte[]? iv;
+    private string secretKey;
     private string userAgent;
 
     public YoudaoTranslator()
     {
-        this.md5 = MD5.Create();
-
-
-        this.random = new Random();
-
         this.userAgent = UtilsFun.GetRandomUserAgent();
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler)
-        {
-            Timeout = TimeSpan.FromSeconds(10)
-        };
-        client.DefaultRequestHeaders.Add("User-Agent", userAgent);
-        client.DefaultRequestHeaders.Add("Referer", "https://fanyi.youdao.com/");
-        client.DefaultRequestHeaders.Add("Origin", "https://fanyi.youdao.com");
+        this.client = BuildClient(this.userAgent);
 
-        SetCookies();
+        var keyUrl = "https://dict.youdao.com/webtranslate/key?" + BaseBody("asdjnjfenknafdfsdfsd")
+            .Prepend(new("keyid", "webfanyi-key-getter"))
+            .ToFormString();
+        var res = this.client.GetAsync(keyUrl).GetAwaiter().GetResult();
+        var keyRes = UtilsFun.ParseJson(res.Content.ReadAsStringAsync().GetAwaiter().GetResult(), TranslatorJsonContext.Default.KeyResponse);
 
-        var res = this.client.GetAsync("https://dict.youdao.com/webtranslate/key".addQueryParameters(new
-        {
-            keyid = "webfanyi-key-getter"
-        },
-        this.BaseBody("asdjnjfenknafdfsdfsd"))).GetAwaiter().GetResult();
-        var keyRes = JsonSerializer.Deserialize<KeyResponse>(res.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-
-        if (keyRes?.code != 0)
+        if (keyRes?.code != 0 || keyRes.data?.secretKey == null)
         {
             Log.Error($"err in get secretKey, {keyRes?.ToString()}", typeof(YoudaoTranslator));
             throw new Exception("err in get secretKey");
         }
 
-        this.secretKey = keyRes.data!.secretKey;
-        this.InitEncrypt();
-
+        this.secretKey = keyRes.data.secretKey;
     }
 
-    private void InitEncrypt()
+    private static HttpClient BuildClient(string userAgent)
     {
-        var GetKeyByte = (string key, byte[] buf) =>
+        var c = new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
         {
-            var bytes = Encoding.UTF8.GetBytes(key);
-            var res = md5.ComputeHash(bytes);
-            for (int i = 0; i < buf.Length; i++)
-            {
-                buf[i] = res[i];
-            }
+            Timeout = TimeSpan.FromSeconds(10)
         };
-        this.encryptKey = new byte[16];
-        this.iv = new byte[16];
-        GetKeyByte("ydsecret://query/key/B*RGygVywfNBwpmBaZg*WT7SIOUP2T0C9WHMZN39j^DAdaZhAnxvGcCY6VYFwnHl", this.encryptKey);
-        GetKeyByte("ydsecret://query/iv/C@lZe2YzHtZ2CYgaXKSVfsb7Y4QWHjITPPZ0nQp87fBeJ!Iv6v^6fvi2WN@bYpJ4", this.iv);
+        c.DefaultRequestHeaders.Add("User-Agent", userAgent);
+        c.DefaultRequestHeaders.Add("Referer", "https://fanyi.youdao.com/");
+        c.DefaultRequestHeaders.Add("Origin", "https://fanyi.youdao.com");
+        c.DefaultRequestHeaders.Add("Cookie", YoudaoUtils.RandomCookie());
+        return c;
     }
 
     public override TranslateResponse? Translate(string src, string toLan = "auto", string fromLan = "auto")
     {
         toLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(toLan);
         fromLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(fromLan);
-        var data = new
-        {
-            i = src,
-            from = fromLan,
-            to = toLan,
-            dictResult = true,
-            keyid = "webfanyi",
-        }.toFormDataBodyString();
-        var baseBody = this.BaseBody(this.secretKey!).toFormDataBodyString();
-        var res = this.client.PostAsync("https://dict.youdao.com/webtranslate",
-                                        new StringContent($"{data}&{baseBody}",
-                                        new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded")))
+        KeyValuePair<string, string>[] data =
+        [
+            new("i", src),
+            new("from", fromLan),
+            new("to", toLan),
+            new("dictResult", "true"),
+            new("keyid", "webfanyi"),
+        ];
+        var res = this.client.PostAsync("https://dict.youdao.com/webtranslate", data.Concat(BaseBody(this.secretKey)).ToFormContent())
                                         .GetAwaiter()
                                         .GetResult();
 
-        var content = this.Decrypt(res.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-        return JsonSerializer.Deserialize<TranslateResponse>(content);
+        var content = Decrypt(res.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+        return UtilsFun.ParseJson(content, TranslatorJsonContext.Default.YoudaoV2Response);
     }
 
-    private long UtcNow()
+    private static string Md5Hex(string src)
     {
-        return DateTimeOffset.Now.ToUnixTimeMilliseconds();
-    }
-    private void SetCookies()
-    {
-        string OUTFOX_SEARCH_USER_ID_NCOO = $"OUTFOX_SEARCH_USER_ID_NCOO={random.Next(100000000, 999999999)}.{random.Next(100000000, 999999999)}";
-        string OUTFOX_SEARCH_USER_ID = $"OUTFOX_SEARCH_USER_ID={random.Next(100000000, 999999999)}@{random.Next(1, 255)}.{random.Next(1, 255)}.{random.Next(1, 255)}.{random.Next(1, 255)}";
-        client.DefaultRequestHeaders.Add("Cookie", $"{OUTFOX_SEARCH_USER_ID_NCOO};{OUTFOX_SEARCH_USER_ID}");
+        return Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(src)));
     }
 
-    private string md5Encrypt(string src)
+    private static string Sign(string t, string key)
     {
-        var bytes = Encoding.UTF8.GetBytes(src);
-        var res = md5.ComputeHash(bytes);
-        var resStr = new StringBuilder();
-        foreach (var item in res)
-        {
-            resStr.Append(item.ToString("x2"));
-        }
-        return resStr.ToString();
+        return Md5Hex($"client=fanyideskweb&mysticTime={t}&product=webfanyi&key={key}");
     }
 
-    private string sign(string t, string key)
+    private static KeyValuePair<string, string>[] BaseBody(string key)
     {
-        return this.md5Encrypt($"client=fanyideskweb&mysticTime={t}&product=webfanyi&key={key}");
+        var now = DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return
+        [
+            new("sign", Sign(now, key)),
+            new("client", "fanyideskweb"),
+            new("product", "webfanyi"),
+            new("appVersion", "1.0.0"),
+            new("vendor", "web"),
+            new("pointParam", "client,mysticTime,product"),
+            new("mysticTime", now),
+            new("keyfrom", "fanyi.web"),
+        ];
     }
 
-    private Object BaseBody(string key)
+    private static string Decrypt(string src)
     {
-        var now = this.UtcNow().ToString();
-        return new
-        {
-            sign = sign(now, key),
-            client = "fanyideskweb",
-            product = "webfanyi",
-            appVersion = "1.0.0",
-            vendor = "web",
-            pointParam = "client,mysticTime,product",
-            mysticTime = now,
-            keyfrom = "fanyi.web",
-        };
-    }
-    private string Decrypt(string src)
-    {
-        if (this.encryptKey == null || this.iv == null)
-            throw new Exception("No key was initialized");
-        string res;
-        using (Aes cryptor = Aes.Create())
-        {
-            cryptor.Key = this.encryptKey;
-            cryptor.IV = this.iv;
-            var decryptor = cryptor.CreateDecryptor(this.encryptKey!, this.iv);
-            using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(src.Replace("-", "+").Replace("_", "/"))))
-            {
-                using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
-                {
-                    using (StreamReader reader = new StreamReader(cryptoStream))
-                    {
-                        res = reader.ReadToEnd();
-                    }
-                }
-            }
-        }
-        return res;
+        var cipher = Convert.FromBase64String(src.Replace('-', '+').Replace('_', '/'));
+        using var aes = Aes.Create();
+        aes.Key = encryptKey;
+        return Encoding.UTF8.GetString(aes.DecryptCbc(cipher, iv));
     }
 
     public override void Reset()
     {
         this.userAgent = UtilsFun.GetRandomUserAgent();
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler)
-        {
-            Timeout = TimeSpan.FromSeconds(10)
-        };
-        client.DefaultRequestHeaders.Add("User-Agent", userAgent);
-        client.DefaultRequestHeaders.Add("Referer", "https://fanyi.youdao.com/");
-        client.DefaultRequestHeaders.Add("Origin", "https://fanyi.youdao.com");
-
-        SetCookies();
+        var old = this.client;
+        this.client = BuildClient(this.userAgent);
+        old.Dispose();
     }
-
 }

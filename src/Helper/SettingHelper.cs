@@ -79,6 +79,7 @@ namespace Translator
         public string dictUtlPattern = dictUrlPatternValues[0];
         public bool useSystemProxy = true;
         public bool enableCodeMode = true;
+        public bool useCambridgeTraditional = false;
         private static SettingHelper? __instance;
         public static SettingHelper Instance
         {
@@ -154,6 +155,12 @@ namespace Translator
                     DisplayLabel = "Translate snake case or camel case words",
                     DisplayDescription = "Translate snake case or camel case words, default to true",
                     Value = true,
+                },
+                new PluginAdditionalOption{
+                    Key = "UseCambridgeTraditional",
+                    DisplayLabel = "Use Cambridge Dictionary for Traditional Chinese",
+                    DisplayDescription = "Look up English words in the Cambridge English-Chinese (Traditional) dictionary when the target is Traditional Chinese (zht) or auto, default to false",
+                    Value = false,
                 }
             };
         }
@@ -172,6 +179,7 @@ namespace Translator
             enableAutoRead = GetSetting("EnableAutoRead").Value;
             showOriginalQuery = GetSetting("ShowOriginalQuery").Value;
             enableCodeMode = GetSetting("EnableCodeMode").Value;
+            useCambridgeTraditional = settings.AdditionalOptions.FirstOrDefault((set) => set.Key == "UseCambridgeTraditional")?.Value ?? false;
             var _useSystemProxy = GetSetting("UseSystemProxy").Value;
             if (_useSystemProxy != useSystemProxy)
             {

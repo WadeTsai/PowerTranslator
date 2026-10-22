@@ -85,7 +85,7 @@ public class AliyunTranslator : ITranslator, IDisposable
     {
         var response = client.GetAsync(csrfEndPoint).GetAwaiter().GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        var data = UtilsFun.ParseJson<AliyunCsrfResp>(content);
+        var data = UtilsFun.ParseJson(content, TranslatorJsonContext.Default.AliyunCsrfResp);
         if (data == null) return;
         _csrf = data.token;
         _csrfHeader = data.headerName;
@@ -107,7 +107,7 @@ public class AliyunTranslator : ITranslator, IDisposable
         };
         var response = client.PostAsync(apiEndPoint, form).GetAwaiter().GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        return UtilsFun.ParseJson<AliyunTranslateResult>(content);
+        return UtilsFun.ParseJson(content, TranslatorJsonContext.Default.AliyunTranslateResult);
     }
 
     public void Dispose()

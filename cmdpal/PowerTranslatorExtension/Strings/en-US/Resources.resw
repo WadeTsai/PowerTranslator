@@ -115,6 +115,8 @@
   <data name="Setting_UseSystemProxy_Desc" xml:space="preserve"><value>Route HTTP requests through the Windows default proxy</value></data>
   <data name="Setting_EnableCodeMode_Label" xml:space="preserve"><value>Translate snake_case / camelCase words</value></data>
   <data name="Setting_EnableCodeMode_Desc" xml:space="preserve"><value>Split snake/camel words into spaces before translating</value></data>
+  <data name="Setting_UseCambridgeTraditional_Label" xml:space="preserve"><value>Use Cambridge Dictionary for Traditional Chinese</value></data>
+  <data name="Setting_UseCambridgeTraditional_Desc" xml:space="preserve"><value>Look up English words in the Cambridge English-Chinese (Traditional) dictionary when the target is Traditional Chinese or auto</value></data>
 
   <!-- Language display names (keys match SettingsManager.Languages) -->
   <data name="Language_auto" xml:space="preserve"><value>Auto</value></data>

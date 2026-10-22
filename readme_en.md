@@ -149,6 +149,7 @@ ptr add Translator N0I0C0K/PowerTranslator
   ![enable Smooth input](Images/enable%20Smooth%20input.png)
 - Toggles the default target translation language, which defaults to 'auto'
   ![languages](Images/languages.png)
+- `Use Cambridge Dictionary for Traditional Chinese` (off by default): when the target is `zht` or `auto`, English words and short phrases (up to 4 words) are looked up in the [Cambridge English-Chinese (Traditional) dictionary](https://dictionary.cambridge.org/dictionary/english-chinese-traditional/). If Cambridge has no entry or the request fails, the other services are used as usual.
 ## Issue
 
 If you find translation failure, unknown errors, or need new features, please submit an issue. I will fix or improve it in time.

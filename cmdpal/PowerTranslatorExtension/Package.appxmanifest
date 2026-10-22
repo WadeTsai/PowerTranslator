@@ -15,10 +15,10 @@
     </Properties>
     <Dependencies>
         <!--
-          Command Palette 只在桌面有，扩展只能在 Windows.Desktop 上运行。
-          不要加 Windows.Universal —— 那等于声明可在 Xbox/Mobile/HoloLens/IoT 上
-          运行，Partner Center 会因此要求 bundle 里有支持 Xbox 等家族的包。
-          MaxVersionTested 跟着 csproj 里的 TargetFramework 平台版本 22621 走。
+          Command Palette 只在桌面有，擴充功能只能在 Windows.Desktop 上執行。
+          不要加 Windows.Universal —— 那等於宣告可在 Xbox/Mobile/HoloLens/IoT 上
+          執行，Partner Center 會因此要求 bundle 裡有支援 Xbox 等家族的包。
+          MaxVersionTested 跟著 csproj 裡的 TargetFramework 平臺版本 22621 走。
         -->
         <TargetDeviceFamily Name="Windows.Desktop"
                             MinVersion="10.0.19041.0"

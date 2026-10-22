@@ -20,7 +20,7 @@ public class MiddlewareTests
         Assert.AreEqual("en", middleware.GetCultureFromAlias("en"));
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("zh-Hans", "zh-CHS")]
     [DataRow("zh-CN", "zh-CHS")]
     [DataRow("zh-TW", "zh-CHT")]

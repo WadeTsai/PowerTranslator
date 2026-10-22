@@ -193,7 +193,7 @@ public class Params
     };
 
     [JsonPropertyName("timestamp")]
-    public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); // 使用当前时间戳
+    public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); // 使用當前時間戳
 
     public Params(string targetLan, string? srcLan, string text)
     {
@@ -273,7 +273,7 @@ public class SplitTextReqParams
     [JsonPropertyName("id")]
     public int Id { get; set; }
 
-    // 构造函数
+    // 建構函式
     public SplitTextReqParams(List<string> texts)
     {
         JsonRpc = "2.0";
@@ -337,11 +337,20 @@ public class DeepLTranslator : ITranslator
     private const string apiEndPoint = "https://www2.deepl.com/jsonrpc?client=chrome-extension,1.33.0";
     public DeepLTranslator()
     {
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler);
-        client.DefaultRequestHeaders.Host = "www2.deepl.com";
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
-        client.DefaultRequestHeaders.Connection.Add("keep-alive");
+        client = BuildClient();
+    }
+
+    private static HttpClient BuildClient()
+    {
+        var c = new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
+        {
+            Timeout = TimeSpan.FromSeconds(10)
+        };
+        c.DefaultRequestHeaders.Host = "www2.deepl.com";
+        c.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
+        c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+        c.DefaultRequestHeaders.Connection.Add("keep-alive");
+        return c;
     }
 
     public SplitTextResp? SplitText(string rawText)
@@ -349,10 +358,7 @@ public class DeepLTranslator : ITranslator
         var body = new SplitTextReqParams(new List<string>{
             rawText
         });
-        var response = this.client.PostAsJsonAsync(apiEndPoint, body, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        }).GetAwaiter().GetResult();
+        var response = this.client.PostAsJsonAsync(apiEndPoint, body).GetAwaiter().GetResult();
         var respDecode = response.Content.ReadFromJsonAsync<SplitTextResp>().GetAwaiter().GetResult();
 
         return respDecode;
@@ -366,17 +372,12 @@ public class DeepLTranslator : ITranslator
         if (fromLan == "auto")
             fromLan = null;
         var body = new DeepLTranslateRequestBody(new Params(toLan, fromLan, src));
-        var bodyStr = JsonSerializer.Serialize(body, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
-        var response = this.client.PostAsync(apiEndPoint, new StringContent(bodyStr, Encoding.Default, "application/json"))
+        var bodyStr = JsonSerializer.Serialize(body, TranslatorJsonContext.Default.DeepLTranslateRequestBody);
+        var response = this.client.PostAsync(apiEndPoint, new StringContent(bodyStr, Encoding.UTF8, "application/json"))
                                             .GetAwaiter()
                                             .GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        Log.Info(src, typeof(DeepLTranslator), "translate raw");
-        Log.Info(content, typeof(DeepLTranslator), "translate");
-        var res = JsonSerializer.Deserialize<DeepLTranslateResult>(content);
+        var res = UtilsFun.ParseJson(content, TranslatorJsonContext.Default.DeepLTranslateResult);
         if (res != null && res.IsSuccess())
             return res;
         return null;
@@ -384,6 +385,8 @@ public class DeepLTranslator : ITranslator
 
     public override void Reset()
     {
-        throw new NotImplementedException();
+        var old = client;
+        client = BuildClient();
+        old.Dispose();
     }
 }

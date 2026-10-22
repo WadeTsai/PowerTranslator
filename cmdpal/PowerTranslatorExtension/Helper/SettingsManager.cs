@@ -53,6 +53,7 @@ public class SettingsManager : JsonSettingsManager
     private readonly ChoiceSetSetting _secondTargetLanguage;
     private readonly ToggleSetting _useSystemProxy;
     private readonly ToggleSetting _enableCodeMode;
+    private readonly ToggleSetting _useCambridgeTraditional;
 
     public string DefaultLanguageKey => _defaultTargetLanguage.Value ?? "auto";
     public string SecondLanguageKey => _secondTargetLanguage.Value ?? "auto";
@@ -71,6 +72,7 @@ public class SettingsManager : JsonSettingsManager
     public bool EnableSecondLanguage => _enableSecondLanguage.Value;
     public bool UseSystemProxy => _useSystemProxy.Value;
     public bool EnableCodeMode => _enableCodeMode.Value;
+    public bool UseCambridgeTraditional => _useCambridgeTraditional.Value;
 
     public event Action? OnSettingsChanged;
 
@@ -141,6 +143,12 @@ public class SettingsManager : JsonSettingsManager
             Loc.Get("Setting_EnableCodeMode_Desc"),
             true);
 
+        _useCambridgeTraditional = new(
+            Namespaced("UseCambridgeTraditional"),
+            Loc.Get("Setting_UseCambridgeTraditional_Label"),
+            Loc.Get("Setting_UseCambridgeTraditional_Desc"),
+            false);
+
         FilePath = SettingsJsonPath();
         Settings.Add(_defaultTargetLanguage);
         Settings.Add(_enableSuggest);
@@ -152,6 +160,7 @@ public class SettingsManager : JsonSettingsManager
         Settings.Add(_secondTargetLanguage);
         Settings.Add(_useSystemProxy);
         Settings.Add(_enableCodeMode);
+        Settings.Add(_useCambridgeTraditional);
 
         LoadSettings();
         _lastUseSystemProxy = UseSystemProxy;

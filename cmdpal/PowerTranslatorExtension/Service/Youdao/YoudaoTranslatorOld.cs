@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using PowerTranslatorExtension.Protocol;
 using PowerTranslatorExtension.Service.Youdao.Utils;
 using PowerTranslatorExtension.Utils;
@@ -61,81 +59,77 @@ public class TranslateResponse : ITranslateResult
 public class YoudaoTranslator : ITranslator, IDisposable
 {
     private HttpClient? client;
-    private readonly Random random = new();
-    private readonly MD5 md5 = MD5.Create();
-    private string userAgent = UtilsFun.GetRandomUserAgent();
+    private readonly string userAgent = UtilsFun.GetRandomUserAgent();
+    private readonly string bv;
     private bool inited;
 
     public bool Inited => inited;
     public string Name => "Youdao Old Web Api";
 
+    public YoudaoTranslator()
+    {
+        bv = Md5Hex(userAgent);
+    }
+
     public void Init() => Reset();
 
     public void Reset()
     {
-        client?.Dispose();
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
+        var c = new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
         {
             Timeout = TimeSpan.FromSeconds(10),
         };
-        client.DefaultRequestHeaders.Add("User-Agent", userAgent);
-        client.DefaultRequestHeaders.Referrer = new Uri("https://fanyi.youdao.com/");
-        client.DefaultRequestHeaders.Add("Origin", "https://fanyi.youdao.com");
-        var ncoo = $"OUTFOX_SEARCH_USER_ID_NCOO={random.Next(100000000, 999999999)}.{random.Next(100000000, 999999999)}";
-        var uid = $"OUTFOX_SEARCH_USER_ID={random.Next(100000000, 999999999)}@{random.Next(1, 255)}.{random.Next(1, 255)}.{random.Next(1, 255)}.{random.Next(1, 255)}";
-        client.DefaultRequestHeaders.Add("Cookie", $"{ncoo};{uid}");
+        c.DefaultRequestHeaders.Add("User-Agent", userAgent);
+        c.DefaultRequestHeaders.Referrer = new Uri("https://fanyi.youdao.com/");
+        c.DefaultRequestHeaders.Add("Origin", "https://fanyi.youdao.com");
+        c.DefaultRequestHeaders.Add("Cookie", YoudaoUtils.RandomCookie());
+        var old = client;
+        client = c;
+        old?.Dispose();
         inited = true;
     }
 
-    private string Md5Encrypt(string src)
+    private static string Md5Hex(string src)
     {
-        var bytes = Encoding.UTF8.GetBytes(src);
-        var hash = md5.ComputeHash(bytes);
-        var sb = new StringBuilder(hash.Length * 2);
-        foreach (var b in hash)
-            sb.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
-        return sb.ToString();
+        return Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(src)));
     }
 
     public ITranslateResult? Translate(string src, string toLan = "AUTO", string fromLan = "AUTO")
     {
-        if (!inited || client == null)
+        var c = client;
+        if (!inited || c == null)
             return null;
         toLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(toLan);
         fromLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(fromLan);
 
         var ts = UtilsFun.GetUtcTimeNow().ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var salt = $"{ts}{random.Next(0, 9)}";
-        var bv = Md5Encrypt(this.userAgent);
-        var sign = Md5Encrypt($"fanyideskweb{src}{salt}Ygy_4c=r#e#4EX^NUGUc5");
-        var data = new
-        {
-            i = src,
-            from = fromLan,
-            to = toLan,
-            smartresult = "dict",
-            client = "fanyideskweb",
-            salt,
-            sign,
-            lts = ts,
-            bv,
-            doctype = "json",
-            version = "2.1",
-            keyfrom = "fanyi.web",
-            action = "FY_BY_REALTlME",
-        };
-        var res = client.PostAsync(
-            "https://fanyi.youdao.com/translate_o?smartresult=dict&smartresult=rule",
-            new StringContent(data.toFormDataBodyString(), new MediaTypeHeaderValue("application/x-www-form-urlencoded")))
+        var salt = $"{ts}{Random.Shared.Next(0, 9)}";
+        var sign = Md5Hex($"fanyideskweb{src}{salt}Ygy_4c=r#e#4EX^NUGUc5");
+        KeyValuePair<string, string>[] data =
+        [
+            new("i", src),
+            new("from", fromLan),
+            new("to", toLan),
+            new("smartresult", "dict"),
+            new("client", "fanyideskweb"),
+            new("salt", salt),
+            new("sign", sign),
+            new("lts", ts),
+            new("bv", bv),
+            new("doctype", "json"),
+            new("version", "2.1"),
+            new("keyfrom", "fanyi.web"),
+            new("action", "FY_BY_REALTlME"),
+        ];
+        var res = c.PostAsync("https://fanyi.youdao.com/translate_o?smartresult=dict&smartresult=rule", data.ToFormContent())
             .GetAwaiter().GetResult();
         var content = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        return UtilsFun.ParseJson<TranslateResponse>(content);
+        return UtilsFun.ParseJson(content, TranslatorJsonContext.Default.YoudaoOldResponse);
     }
 
     public void Dispose()
     {
         client?.Dispose();
-        md5.Dispose();
         GC.SuppressFinalize(this);
     }
 }

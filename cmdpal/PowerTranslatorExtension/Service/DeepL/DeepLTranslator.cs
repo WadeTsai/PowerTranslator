@@ -239,11 +239,11 @@ public class DeepLTranslator : ITranslator, IDisposable
             toLan = "en";
         string? from = string.Equals(fromLan, "auto", StringComparison.OrdinalIgnoreCase) ? null : fromLan;
         var body = new DeepLTranslateRequestBody(new Params(toLan, from, src));
-        var bodyStr = JsonSerializer.Serialize(body);
+        var bodyStr = JsonSerializer.Serialize(body, TranslatorJsonContext.Default.DeepLTranslateRequestBody);
         var response = client.PostAsync(apiEndPoint, new StringContent(bodyStr, Encoding.UTF8, "application/json"))
             .GetAwaiter().GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        var res = UtilsFun.ParseJson<DeepLTranslateResult>(content);
+        var res = UtilsFun.ParseJson(content, TranslatorJsonContext.Default.DeepLTranslateResult);
         return res != null && res.IsSuccess() ? res : null;
     }
 

@@ -107,6 +107,8 @@
   <data name="Setting_UseSystemProxy_Desc" xml:space="preserve"><value>通过 Windows 默认代理转发 HTTP 请求</value></data>
   <data name="Setting_EnableCodeMode_Label" xml:space="preserve"><value>翻译 snake_case / camelCase 单词</value></data>
   <data name="Setting_EnableCodeMode_Desc" xml:space="preserve"><value>翻译前将 snake/camel 单词按空格拆分</value></data>
+  <data name="Setting_UseCambridgeTraditional_Label" xml:space="preserve"><value>使用剑桥词典查询繁体中文</value></data>
+  <data name="Setting_UseCambridgeTraditional_Desc" xml:space="preserve"><value>目标语言为繁体中文或自动时，使用剑桥英汉（繁体）词典查询英文单词</value></data>
 
   <data name="Language_auto" xml:space="preserve"><value>自动</value></data>
   <data name="Language_zhs" xml:space="preserve"><value>简体中文</value></data>

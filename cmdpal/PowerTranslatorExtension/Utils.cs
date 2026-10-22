@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Reflection;
 using System.Net.Http;
 using System.Net;
@@ -14,10 +15,7 @@ namespace PowerTranslatorExtension.Utils
 {
     public static partial class UtilsFun
     {
-        public static HttpClientHandler httpClientDefaultHandler = new()
-        {
-            UseProxy = false
-        };
+        public static HttpClientHandler httpClientDefaultHandler = CreateHandler(useSystemProxy: false);
         public static Action? onHttpDefaultHandlerChange;
         public static string[] user_agents = {
             "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36",
@@ -36,6 +34,19 @@ namespace PowerTranslatorExtension.Utils
         {
             return src.Replace('，', ',').Replace('；', ';').Replace('（', '(').Replace('）', ')');
         }
+        public static T? ParseJson<T>(string src, JsonTypeInfo<T> typeInfo)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize(src, typeInfo);
+            }
+            catch (JsonException)
+            {
+                return default(T);
+            }
+        }
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Use the JsonTypeInfo overload with TranslatorJsonContext.")]
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Use the JsonTypeInfo overload with TranslatorJsonContext.")]
         public static T? ParseJson<T>(string src)
         {
             try
@@ -92,23 +103,16 @@ namespace PowerTranslatorExtension.Utils
                 action(item);
             }
         }
-        public static string addQueryParameters(this string src, params object[] objs)
+        /// <summary>
+        /// Encodes key/value pairs as application/x-www-form-urlencoded (also valid as a query string).
+        /// </summary>
+        public static string ToFormString(this IEnumerable<KeyValuePair<string, string>> pairs)
         {
-            string tar = string.Join("&", objs.Select((obj) =>
-            {
-                return obj.toFormDataBodyString();
-            }));
-
-            return $"{src}?{tar}";
+            return string.Join("&", pairs.Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
         }
-        public static string toFormDataBodyString(this object src)
+        public static StringContent ToFormContent(this IEnumerable<KeyValuePair<string, string>> pairs)
         {
-            var res = new List<string>();
-            foreach (var key in src.GetType().GetProperties())
-            {
-                res.Add($"{key.Name}={src.GetType().GetProperty(key.Name)?.GetValue(src)}");
-            }
-            return string.Join("&", res);
+            return new StringContent(pairs.ToFormString(), System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
         }
         public static List<ListItem> ToResultList(
             this IEnumerable<ResultItem> src,
@@ -204,27 +208,26 @@ namespace PowerTranslatorExtension.Utils
         }
         public static string removeSpecialCharacter(this string str)
         {
-            string pattern = @"[^\w\s\u4e00-\u9fa5]";
-            return Regex.Replace(str, pattern, " ");
+            return SpecialCharacterRegex().Replace(str, " ");
+        }
+
+        [GeneratedRegex(@"[^\w\s\u4e00-\u9fa5]")]
+        private static partial Regex SpecialCharacterRegex();
+
+        private static HttpClientHandler CreateHandler(bool useSystemProxy)
+        {
+            return new HttpClientHandler
+            {
+                UseProxy = useSystemProxy,
+                Proxy = useSystemProxy ? WebRequest.GetSystemWebProxy() : null,
+                // API responses and dictionary pages compress well; without this every response is downloaded raw.
+                AutomaticDecompression = DecompressionMethods.All,
+            };
         }
 
         public static void ChangeDefaultHttpHandlerProxy(bool useSystemProxy, bool callEvent = true)
         {
-            if (useSystemProxy)
-            {
-                UtilsFun.httpClientDefaultHandler = new HttpClientHandler
-                {
-                    UseProxy = true,
-                    Proxy = WebRequest.GetSystemWebProxy()
-                };
-            }
-            else
-            {
-                UtilsFun.httpClientDefaultHandler = new HttpClientHandler
-                {
-                    UseProxy = false,
-                };
-            }
+            UtilsFun.httpClientDefaultHandler = CreateHandler(useSystemProxy);
             if (callEvent)
                 onHttpDefaultHandlerChange?.Invoke();
         }

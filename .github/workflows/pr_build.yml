@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
 
-# 同一 PR 推新提交时取消旧任务，省 Actions 配额
+# 同一 PR 推新提交時取消舊任務，省 Actions 配額
 concurrency:
   group: pr-build-${{ github.ref }}
   cancel-in-progress: true
@@ -20,7 +20,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
 
       - name: Setup msbuild.exe
         uses: microsoft/setup-msbuild@v2
@@ -55,7 +55,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
 
       - name: Pack (build + zip)
         run: dotnet pack Translater.csproj -c Release -p:Platform=${{ matrix.platform }}
@@ -82,14 +82,14 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
 
       - name: Setup msbuild.exe
         uses: microsoft/setup-msbuild@v2
 
-      # csproj 锁了 WindowsSdkPackageVersion = 10.0.22621.57，runner 镜像（尤其
-      # windows-2025）默认不带 UAP Platforms\10.0.22621.0\Platform.xml，cswinrt
-      # 投影会因此挂掉。显式装一下 SDK 22621。
+      # csproj 鎖了 WindowsSdkPackageVersion = 10.0.22621.57，runner 映像（尤其
+      # windows-2025）預設不帶 UAP Platforms\10.0.22621.0\Platform.xml，cswinrt
+      # 投影會因此掛掉。顯式裝一下 SDK 22621。
       - name: Install Windows 10/11 SDK 22621
         uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
         with:

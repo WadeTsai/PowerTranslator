@@ -64,20 +64,26 @@ public class BackUpTranslator : ITranslator
     private const string userAgent = "Mozilla/5.0 (X11; CrOS i686 3912.101.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.116 Safari/537.36";
     public BackUpTranslator()
     {
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler);
-        client.Timeout = TimeSpan.FromMilliseconds(500);
-        client.DefaultRequestHeaders.Add("User-Agent", userAgent);
-        client.DefaultRequestHeaders.Add("Referer", "https://ai.youdao.com/");
-        client.DefaultRequestHeaders.Add("Origin", "https://ai.youdao.com");
+        client = BuildClient();
+    }
+
+    private static HttpClient BuildClient()
+    {
+        var c = new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
+        {
+            Timeout = TimeSpan.FromMilliseconds(500)
+        };
+        c.DefaultRequestHeaders.Add("User-Agent", userAgent);
+        c.DefaultRequestHeaders.Add("Referer", "https://ai.youdao.com/");
+        c.DefaultRequestHeaders.Add("Origin", "https://ai.youdao.com");
+        return c;
     }
 
     public override void Reset()
     {
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler);
-        client.Timeout = TimeSpan.FromMilliseconds(500);
-        client.DefaultRequestHeaders.Add("User-Agent", userAgent);
-        client.DefaultRequestHeaders.Add("Referer", "https://ai.youdao.com/");
-        client.DefaultRequestHeaders.Add("Origin", "https://ai.youdao.com");
+        var old = client;
+        client = BuildClient();
+        old.Dispose();
     }
 
     public override TranslateResult? Translate(string src, string fromLan = "Auto", string toLan = "Auto")
@@ -85,19 +91,11 @@ public class BackUpTranslator : ITranslator
         fromLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(fromLan);
         toLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(toLan);
 
-        var data = new
-        {
-            q = src,
-            from = fromLan,
-            to = toLan
-        }.toFormDataBodyString();
-        var response = this.client.PostAsync("https://aidemo.youdao.com/trans", new StringContent(
-                                            data,
-                                            new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded")))
+        KeyValuePair<string, string>[] data = [new("q", src), new("from", fromLan), new("to", toLan)];
+        var response = this.client.PostAsync("https://aidemo.youdao.com/trans", data.ToFormContent())
                                             .GetAwaiter()
                                             .GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        Console.WriteLine(content);
-        return JsonSerializer.Deserialize<TranslateResult>(content);
+        return JsonSerializer.Deserialize(content, TranslatorJsonContext.Default.YoudaoBackupResult);
     }
 }

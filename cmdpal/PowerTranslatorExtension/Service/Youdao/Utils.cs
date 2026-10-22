@@ -16,18 +16,20 @@ public class YoudaoUtils
     );
 
 
+    /// <summary>
+    /// Random anonymous visitor cookie, as set by the Youdao web page.
+    /// </summary>
+    public static string RandomCookie()
+    {
+        var r = System.Random.Shared;
+        return $"OUTFOX_SEARCH_USER_ID_NCOO={r.Next(100000000, 999999999)}.{r.Next(100000000, 999999999)};" +
+               $"OUTFOX_SEARCH_USER_ID={r.Next(100000000, 999999999)}@{r.Next(1, 255)}.{r.Next(1, 255)}.{r.Next(1, 255)}.{r.Next(1, 255)}";
+    }
+
     public string GetYoudaoLanguageCode(string curtualName)
     {
         return youdaoLanguageCodeHelper.GetLanguageCode(curtualName);
     }
 
-    private static YoudaoUtils? __instance;
-    public static YoudaoUtils Instance
-    {
-        get
-        {
-            __instance ??= new YoudaoUtils();
-            return __instance;
-        }
-    }
+    public static YoudaoUtils Instance { get; } = new YoudaoUtils();
 }

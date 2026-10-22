@@ -1,75 +1,75 @@
 # Getting Start
 
-## 结构
+## 結構
 
-程序的入口是官方提供的 IPlugin 接口，通过 query 函数触发。下面讲解各个类的主要作用
+程式的入口是官方提供的 IPlugin 介面，通過 query 函式觸發。下面講解各個類的主要作用
 
 ### Translator
 
-插件的各个基础功能，插件的属性，实现官方的各种基础接口（比如 设置、查询）
+外掛的各個基礎功能，外掛的屬性，實現官方的各種基礎介面（比如 設定、查詢）
 
 ### Utils
 
-工具空间，通用功能
+工具空間，通用功能
 
 ### TranslateHelper
 
-翻译功能的适配器，向上层（Transltor）提供可直接调用的翻译接口函数，向下负责调度各个翻译 API 的实现，确保翻译的稳定和快速
+翻譯功能的轉接器，向上層（Transltor）提供可直接呼叫的翻譯介面函式，向下負責排程各個翻譯 API 的實現，確保翻譯的穩定和快速
 
 ### SuggestHelper
 
-建议功能的适配器，目前只有一个 suggest 接口故同时集成了建议功能的实现
+建議功能的轉接器，目前只有一個 suggest 介面故同時集成了建議功能的實現
 
 ### HistoryHelper
 
-历史功能的适配器
+歷史功能的轉接器
 
 ### ITransltor
 
-具体的翻译实现（通常是网络接口调用）
+具體的翻譯實現（通常是網路介面呼叫）
 
-目前已经实现的翻译接口有：
-- 有道翻译网页版本
-- 有道翻译 api 试用版本（用于 backup）
-- 有道翻译老版本网页
+目前已經實現的翻譯介面有：
+- 有道翻譯網頁版本
+- 有道翻譯 api 試用版本（用於 backup）
+- 有道翻譯老版本網頁
 
-计划中的翻译接口实现：
-- 微软翻译
-- 谷歌翻译
+計劃中的翻譯介面實現：
+- 微軟翻譯
+- 谷歌翻譯
 
 ### SettingHelper
 
-提供设置接口，主要是在 Power toys 界面中显示的设置
+提供設定介面，主要是在 Power toys 介面中顯示的設定
 
-## 如何添加一个翻译实现
+## 如何新增一個翻譯實現
 
-假设我们要添加 Google 翻译
+假設我們要新增 Google 翻譯
 
-1. 新建一个文件夹 Google
+1. 新建一個資料夾 Google
 2. 新建 GoogleTransltor.cs
-3. 新建 class GoogleTransltor 继承自 ITranslater，实现接口。
-4. 在 TranslateHelper 中的构造函数里的 translatorTypes 中添加 GoogleTransltor。
-5. 测试是否成功调用
+3. 新建 class GoogleTransltor 繼承自 ITranslater，實現介面。
+4. 在 TranslateHelper 中的建構函式裡的 translatorTypes 中新增 GoogleTransltor。
+5. 測試是否成功呼叫
 
-就这样你就添加了一个新的翻译接口了！
+就這樣你就添加了一個新的翻譯介面了！
 
 
-## 测试 and 打包
+## 測試 and 打包
 
-测试的一般步骤是：
-1. 编写好代码后，使用 build 命令生成插件 dll
-2. 放到插件目录下后重新运行 Power toys run
+測試的一般步驟是：
+1. 編寫好程式碼後，使用 build 命令生成外掛 dll
+2. 放到外掛目錄下後重新執行 Power toys run
 
 ### build
 
-运行 `dotnet build -p:Platform={x64|ARM64}` 会在 `/bin/output` 下生成完整的插件文件，可以直接拖到插件目录下完成安装
+執行 `dotnet build -p:Platform={x64|ARM64}` 會在 `/bin/output` 下生成完整的外掛檔案，可以直接拖到外掛目錄下完成安裝
 
-### 测试用例
+### 測試用例
 
-目前还没有测试用例的编写，考虑在后期加上
+目前還沒有測試用例的編寫，考慮在後期加上
 
 ### pack
 
-自己手动测试没有问题后，运行 `dotnet pack` 打包命令，会生成 `/bin/Translator_{x64|ARM64}.zip` 就是完整的插件文件了
+自己手動測試沒有問題後，執行 `dotnet pack` 打包命令，會生成 `/bin/Translator_{x64|ARM64}.zip` 就是完整的外掛檔案了
 
-pack 和 build 命令可以通过修改 [Translater.csproj](../Translater.csproj) 文件修改
+pack 和 build 命令可以通過修改 [Translater.csproj](../Translater.csproj) 檔案修改

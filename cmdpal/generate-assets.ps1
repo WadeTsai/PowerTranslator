@@ -1,17 +1,17 @@
 #requires -Version 7
 <#
 .SYNOPSIS
-    重新生成 cmdpal 扩展模板自带的 Asset PNG 文件。
+    重新生成 cmdpal 擴充功能模板自帶的 Asset PNG 檔案。
 
 .DESCRIPTION
-    cmdpal 模板默认生成的 PNG 在某次 commit 中被某个工具按 UTF-8 文本读了，
-    所有非 ASCII 字节被替换成 U+FFFD，文件已损坏（git blob 里就是坏的）。
+    cmdpal 模板預設生成的 PNG 在某次 commit 中被某個工具按 UTF-8 文本讀了，
+    所有非 ASCII 位元組被替換成 U+FFFD，檔案已損壞（git blob 裡就是壞的）。
 
-    此脚本以仓库里干净的 translator.light.png (48x48) 为底图，居中缩放贴到
-    Store / WinUI3 包要求的各个尺寸画布上，输出标准 PNG。
+    此指令碼以倉庫裡乾淨的 translator.light.png (48x48) 為底圖，居中縮放貼到
+    Store / WinUI3 包要求的各個尺寸畫布上，輸出標準 PNG。
 
-    需要的源文件 translator.light.png 必须是真实 PNG。所有输出会覆盖现有
-    文件。
+    需要的原始檔 translator.light.png 必須是真實 PNG。所有輸出會覆蓋現有
+    檔案。
 
 .EXAMPLE
     pwsh .\cmdpal\generate-assets.ps1
@@ -27,19 +27,19 @@ $assetsDir = Join-Path $PSScriptRoot 'PowerTranslatorExtension\Assets'
 $source = Join-Path $assetsDir 'translator.light.png'
 
 if (-not (Test-Path $source)) {
-    throw "找不到源图: $source"
+    throw "找不到源圖: $source"
 }
 
 Add-Type -AssemblyName System.Drawing
 
-# 校验源图是真 PNG
+# 校驗源圖是真 PNG
 $srcBytes = [System.IO.File]::ReadAllBytes($source)
 if (-not ($srcBytes[0] -eq 0x89 -and $srcBytes[1] -eq 0x50 -and $srcBytes[2] -eq 0x4E -and $srcBytes[3] -eq 0x47)) {
-    throw "源图 translator.light.png 本身也是坏的（不是 PNG），无法继续。"
+    throw "源圖 translator.light.png 本身也是壞的（不是 PNG），無法繼續。"
 }
-Write-Host "源图: $source ($(([System.Drawing.Image]::FromFile($source)).Width)x$([System.Drawing.Image]::FromFile($source).Height))" -ForegroundColor DarkGray
+Write-Host "源圖: $source ($(([System.Drawing.Image]::FromFile($source)).Width)x$([System.Drawing.Image]::FromFile($source).Height))" -ForegroundColor DarkGray
 
-# 目标 (filename, w, h, [iconScale 0-1, 0.8 = 图标占画布 80% 边长])
+# 目標 (filename, w, h, [iconScale 0-1, 0.8 = 圖標占畫布 80% 邊長])
 $targets = @(
     @{ Name = 'StoreLogo.png';                                        W = 50;   H = 50;  Scale = 0.85 },
     @{ Name = 'Square44x44Logo.scale-200.png';                        W = 88;   H = 88;  Scale = 0.85 },
@@ -62,7 +62,7 @@ try {
             $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
             $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
 
-            # 等比缩放 + 居中
+            # 等比縮放 + 居中
             $iconSide = [int]([Math]::Min($t.W, $t.H) * $t.Scale)
             $x = [int](($t.W - $iconSide) / 2)
             $y = [int](($t.H - $iconSide) / 2)
@@ -73,7 +73,7 @@ try {
         $canvas.Save($outPath, [System.Drawing.Imaging.ImageFormat]::Png)
         $canvas.Dispose()
 
-        # 验证产物
+        # 驗證產物
         $b = [System.IO.File]::ReadAllBytes($outPath)
         $magic = ($b[0..7] | ForEach-Object { '{0:x2}' -f $_ }) -join ' '
         $ok = $b[0] -eq 0x89 -and $b[1] -eq 0x50 -and $b[2] -eq 0x4E -and $b[3] -eq 0x47

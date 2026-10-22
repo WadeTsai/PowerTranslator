@@ -1,7 +1,7 @@
 <div align="center">
 <h1>PowerTranslator</h1>
-<p>一个用于<a href=https://github.com/microsoft/PowerToys>PowerToys Run</a>的翻译插件, 快速, 稳定.</p>
-<p>支持 cmdpal</p>
+<p>一個用於<a href=https://github.com/microsoft/PowerToys>PowerToys Run</a>的翻譯外掛, 快速, 穩定.</p>
+<p>支援 cmdpal</p>
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/N0I0C0K/PowerTranslator?style=flat-square) ![GitHub Repo stars](https://img.shields.io/github/stars/N0I0C0K/PowerTranslator?color=ffb900&style=flat-square) ![GitHub all releases](https://img.shields.io/github/downloads/N0I0C0K/PowerTranslator/total?style=flat-square) ![GitHub](https://img.shields.io/github/license/N0I0C0K/PowerTranslator?style=flat-square) [![Mentioned in Awesome PowerToys Run Plugins](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/hlaueriksson/awesome-powertoys-run-plugins)
 
@@ -11,28 +11,28 @@
 
 ## About
 
-一个用于[PowerToysRun](https://github.com/microsoft/PowerToys)的插件。现已接入多个平台提供**快速且稳定**的翻译
+一個用於[PowerToysRun](https://github.com/microsoft/PowerToys)的外掛。現已接入多個平臺提供**快速且穩定**的翻譯
 
 ## Index
 
 - [如何使用](#usage)
-  - [cmdpal](#支持-cmdpal)
-- [开发命令](#开发命令)
-- [安装](#install)
-- [设置](#setting)
-- [提交问题](#issue)
-- [贡献](#Contribution)
+  - [cmdpal](#支援-cmdpal)
+- [開發命令](#開發命令)
+- [安裝](#install)
+- [設定](#setting)
+- [提交問題](#issue)
+- [貢獻](#Contribution)
 
-## 开发命令
+## 開發命令
 
-项目根目录的 [justfile](./justfile) 统一了开发、测试和打包命令。执行 `just` 或 `just help` 可查看完整列表。
+專案根目錄的 [justfile](./justfile) 統一了開發、測試和打包命令。執行 `just` 或 `just help` 可檢視完整列表。
 
 ```powershell
-# 传统 PowerToys Run 插件
+# 傳統 PowerToys Run 外掛
 just legacy-build-all
 just legacy-pack-all
 
-# Command Palette 扩展
+# Command Palette 擴充功能
 just test
 just cmdpal-build-all
 just cmdpal-install-local
@@ -40,77 +40,77 @@ just cmdpal-clean-local
 just cmdpal-store
 ```
 
-`cmdpal-install-local` 会构建、自签名并安装实际的本地 `.msix`，适合 e2e 验证；其临时证书位于被 Git 忽略的 `cmdpal/.local-cert/`，密码使用当前用户的 DPAPI 加密。为满足 Windows 的 MSIX 安装规则，首次运行会经 UAC 确认把公钥导入 `LocalMachine\TrustedPeople`。若检测到旧扩展正在运行，会先展示 PID 并等待确认后才停止它。`cmdpal-clean-local` 也会经 UAC 删除该信任及证书目录；不会卸载应用。
+`cmdpal-install-local` 會構建、自簽名並安裝實際的本地 `.msix`，適合 e2e 驗證；其臨時證書位於被 Git 忽略的 `cmdpal/.local-cert/`，密碼使用當前使用者的 DPAPI 加密。為滿足 Windows 的 MSIX 安裝規則，首次執行會經 UAC 確認把公鑰匯入 `LocalMachine\TrustedPeople`。若檢測到舊擴充功能正在執行，會先展示 PID 並等待確認後才停止它。`cmdpal-clean-local` 也會經 UAC 刪除該信任及證書目錄；不會解除安裝應用。
 
-`cmdpal-store` 会构建 x64 和 ARM64 的 Microsoft Store `.msixbundle` 到 `dist/`；构建前仍会执行现有脚本中的应用清单检查。
+`cmdpal-store` 會構建 x64 和 ARM64 的 Microsoft Store `.msixbundle` 到 `dist/`；構建前仍會執行現有指令碼中的應用清單檢查。
 
 ## Usage
 
-- 默认触发键为`|`.（下方GIF演示采用的自定义触发键`^`）
-- 指定翻译文本
+- 預設觸發鍵為`|`.（下方GIF演示採用的自定義觸發鍵`^`）
+- 指定翻譯文本
 
-  - `alt+space`打开 PowerToysRun, 输入`^[你要翻译的地方]`
-  - `Enter`复制翻译结果到剪贴板
+  - `alt+space`開啟 PowerToysRun, 輸入`^[你要翻譯的地方]`
+  - `Enter`複製翻譯結果到剪貼簿
 
-  演示翻译 `command`
+  演示翻譯 `command`
   ![command](Images/command.gif)
 
-  演示翻译 `命令`
+  演示翻譯 `命令`
   ![chinese](Images/%E5%91%BD%E4%BB%A4.gif)
 
-- 中文带有拼音
-  参考上方演示翻译`命令`
+- 中文帶有拼音
+  參考上方演示翻譯`命令`
 
-- 快速翻译剪贴板
+- 快速翻譯剪貼簿
 
-  - 当剪贴板内有文字, 直接键入触发关键字`^`, 即可快速翻译剪贴板内的内容
+  - 當剪貼簿內有文字, 直接鍵入觸發關鍵字`^`, 即可快速翻譯剪貼簿內的內容
 
     ![clipboard](Images/clipboard.gif)
 
-- 指定翻译目标语言
+- 指定翻譯目標語言
 
-  - 使用 `^[words]->[Target language]`, 例如: `^你好->ja` 表示把你好翻译为日文
+  - 使用 `^[words]->[Target language]`, 例如: `^你好->ja` 表示把你好翻譯為日文
     ![Specified language](Images/target%20lan.gif)
-    常用语言代码
-    |语言|代码|备注|
+    常用語言代碼
+    |語言|代碼|備註|
     |---------|------|-|
-    |汉语(简体) | zhs | 汉语简体
-    |汉语(繁体) | zht| 漢語翻譯
-    |日语 |ja| 日本語
-    |英语 |en| English
-    |韩语 |ko| 한국어
-    |法语 |fr| En français
-    |俄语 |ru| русский
+    |漢語(簡體) | zhs | 漢語簡體
+    |漢語(繁體) | zht| 漢語翻譯
+    |日語 |ja| 日本語
+    |英語 |en| English
+    |韓語 |ko| 한국어
+    |法語 |fr| En français
+    |俄語 |ru| русский
 
-- 搜索建议
+- 搜尋建議
 
-  - 根据当前的输入建议搜索内容
+  - 根據當前的輸入建議搜尋內容
     ![suggest](Images/suggest.gif)
-  - 可以在设置里选择是否启用建议, 对应`Enable search suggest`
+  - 可以在設定裡選擇是否啟用建議, 對應`Enable search suggest`
 
-- 朗读内容
+- 朗讀內容
 
-  - 支持朗读中文, 英文(快捷键 ctrl+enter)
+  - 支援朗讀中文, 英文(快捷鍵 ctrl+enter)
     ![read](Images/read.png)
-  - 基于有道 TTS 接口
-  - 支持自动朗读结果功能, **默认关闭**, 可以在设置开启.对应`Automatic reading result`
+  - 基於有道 TTS 介面
+  - 支援自動朗讀結果功能, **預設關閉**, 可以在設定開啟.對應`Automatic reading result`
 
-- 历史记录
-  - 键入`h`或者剪贴板内无翻译目标会显示历史翻译记录.
+- 歷史記錄
+  - 鍵入`h`或者剪貼簿內無翻譯目標會顯示歷史翻譯記錄.
     ![his](Images/his.png)
-  - 默认 **15** 条记录
-  - **为什么不支持自定义上限条目?**
-    因为官方只开放了 bool 类型的自定义参数, 所以目前不支持自定义历史记录上限. 等待后续支持我会更新.或者可以下载源码自行修改编译.
+  - 預設 **15** 條記錄
+  - **為什麼不支援自定義上限條目?**
+    因為官方只開放了 bool 型別的自定義引數, 所以目前不支援自定義歷史記錄上限. 等待後續支援我會更新.或者可以下載原始碼自行修改編譯.
 
-- 第二语言
-  - 开启第二翻译目标语言，默认关闭
+- 第二語言
+  - 開啟第二翻譯目標語言，預設關閉
   ![second option](Images/second_option.png)
-  - 开启后会在每次翻译的时候自动展示第二语言结果
+  - 開啟後會在每次翻譯的時候自動展示第二語言結果
   ![second](Images/second.png)
 
 
-### 支持 Cmdpal
-所有 Powertoys Run 的功能同样也支持在 cmdpal 中使用
+### 支援 Cmdpal
+所有 Powertoys Run 的功能同樣也支援在 cmdpal 中使用
 ![cmdpal](Images/cmdpal_translate.png)
 
 
@@ -118,18 +118,18 @@ just cmdpal-store
 
 ### Cmdpal
 
-通过 MicroStore 安装 - [商店页面](https://apps.microsoft.com/store/detail/9NWN01SZ6KNK?cid=DevShareMCLPCS)
+通過 MicroStore 安裝 - [商店頁面](https://apps.microsoft.com/store/detail/9NWN01SZ6KNK?cid=DevShareMCLPCS)
 
-### PowerToys Run 插件
+### PowerToys Run 外掛
 
-1. 关闭 PowerToys
-2. 下载 [Translator.zip](https://github.com/N0I0C0K/PowerTranslator/releases)
-3. 解压到`%LOCALAPPDATA%\Microsoft\PowerToys\PowerToys Run\Plugins`
-   如图所示
+1. 關閉 PowerToys
+2. 下載 [Translator.zip](https://github.com/N0I0C0K/PowerTranslator/releases)
+3. 解壓到`%LOCALAPPDATA%\Microsoft\PowerToys\PowerToys Run\Plugins`
+   如圖所示
    ![file](Images/file.png)
-4. 启动 PowerToys
+4. 啟動 PowerToys
 
-(参考官方[第三方插件安装文档](https://github.com/microsoft/PowerToys/blob/main/doc/thirdPartyRunPlugins.md))
+(參考官方[第三方外掛安裝文件](https://github.com/microsoft/PowerToys/blob/main/doc/thirdPartyRunPlugins.md))
 
 ---
 
@@ -139,22 +139,23 @@ Via [ptr](https://github.com/8LWXpg/ptr)
 ptr add Translator N0I0C0K/PowerTranslator
 ```
 
-[安装-升级 详细教程](./doc/how%20to%20install.md)
+[安裝-升級 詳細教程](./doc/how%20to%20install.md)
 
 ## Setting
 
-- 如果触发按键冲突, 修改默认触发键 (建议修改为" \` ", 同时建议检查一下有无冲突)。**注意在v0.8之后默认触发按键是`"|"`，无需再次修改**
+- 如果觸發按鍵衝突, 修改預設觸發鍵 (建議修改為" \` ", 同時建議檢查一下有無衝突)。**注意在v0.8之後預設觸發按鍵是`"|"`，無需再次修改**
   ![change active key](Images/change_active.png)
-- 建议勾选`输入平滑`, 可以优化输入体验
+- 建議勾選`輸入平滑`, 可以最佳化輸入體驗
   ![enable Smooth input](Images/enable%20Smooth%20input.png)
-- `启动时清除上一查询`可以快速触发翻译剪切板, **按需求勾选.**
+- `啟動時清除上一查詢`可以快速觸發翻譯剪貼簿, **按需求勾選.**
   ![auto clean](Images/auto_clean.png)
-- 切换默认目标翻译语言，默认是`auto`
+- 切換預設目標翻譯語言，預設是`auto`
   ![languages](Images/languages.png)
+- `使用劍橋詞典查詢繁體中文`（預設關閉）：目標語言為 `zht` 或 `auto` 時，英文單字與短語（最多 4 個單字）會改用[劍橋英漢（繁體）詞典](https://dictionary.cambridge.org/dictionary/english-chinese-traditional/)查詢；若查無結果或請求失敗，則照常使用其他翻譯服務。
 
 ## Issue
 
-如果发现了无法翻译, 出现了未知错误, 需要新的功能, 欢迎提交 issue. 我会及时修复或改进
+如果發現了無法翻譯, 出現了未知錯誤, 需要新的功能, 歡迎提交 issue. 我會及時修復或改進
 
 ## Contribution
 
@@ -164,10 +165,10 @@ ptr add Translator N0I0C0K/PowerTranslator
 
 ### Step
 
-1. fork 这个仓库
-2. clone fork 后的仓库到本地
-3. 运行 `dotnet restore`(可选)
-3. 使用 vscode（任意） 打开
-5. 开始编码吧！
+1. fork 這個倉庫
+2. clone fork 後的倉庫到本地
+3. 執行 `dotnet restore`(可選)
+3. 使用 vscode（任意） 開啟
+5. 開始編碼吧！
 
-[帮助文档 - Getting Start!](doc/code-start-zh.md)
+[幫助文件 - Getting Start!](doc/code-start-zh.md)

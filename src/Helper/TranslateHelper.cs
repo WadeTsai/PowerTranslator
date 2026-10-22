@@ -28,6 +28,7 @@ public class TranslateHelper
     private IPublicAPI publicAPI;
     private List<ITranslator?> translators;
     private List<Type> translatorGenerators;
+    private Service.Cambridge.CambridgeTranslator cambridgeTranslator;
     private bool isSpeaking = false;
     private bool isIniting = false;
     public string defaultLanguageKey = "auto";
@@ -39,17 +40,17 @@ public class TranslateHelper
     );
     public TranslateHelper(IPublicAPI publicAPI, string defaultLanguageKey = "auto")
     {
-        this.translators = new List<ITranslator?>{
-            null, null, null
-        };
         translatorGenerators = new List<Type>{
             typeof(Service.Youdao.V2.YoudaoTranslator),
             typeof(Service.Youdao.old.YoudaoTranslator),
             typeof(Service.DeepL.DeepLTranslator),
             typeof(Service.Youdao.Backup.BackUpTranslator),
         };
+        // One slot per generator; there used to be fewer slots than generators, so the backup translator never loaded.
+        this.translators = translatorGenerators.Select(_ => (ITranslator?)null).ToList();
         // make sure do it before init translator
         UtilsFun.ChangeDefaultHttpHandlerProxy(SettingHelper.Instance.useSystemProxy, false);
+        this.cambridgeTranslator = new Service.Cambridge.CambridgeTranslator();
 
         this.InitTranslator();
         this.publicAPI = publicAPI;
@@ -83,8 +84,25 @@ public class TranslateHelper
             toLan = cultureAliasHelper.GetCultureFromAlias(_toLan)
         };
     }
+    private ITranslateResult? TranslateWithCambridge(string text, string toLan)
+    {
+        if (!SettingHelper.Instance.useCambridgeTraditional)
+            return null;
+        try
+        {
+            return cambridgeTranslator.Translate(text, toLan, "en");
+        }
+        catch (Exception err)
+        {
+            Log.Error($"Cambridge: {err.Message}", typeof(TranslateHelper));
+            return null;
+        }
+    }
     private ITranslateResult? Translate(string text, string toLan)
     {
+        var cambridgeResult = TranslateWithCambridge(text, toLan);
+        if (cambridgeResult != null)
+            return cambridgeResult;
         return translators.Enumerate().FirstNotNoneCast((data) =>
         {
             var (idx, it) = data;
@@ -237,7 +255,7 @@ public class TranslateHelper
             }
             catch (AggregateException ex)
             {
-                // 捕获并处理 Task.WhenAll 返回的聚合异常
+                // 捕獲並處理 Task.WhenAll 返回的聚合異常
                 foreach (Exception innerException in ex.InnerExceptions)
                 {
                     Log.Error($"Error occurred during task execution: {innerException.Message}", typeof(Translator));
@@ -260,6 +278,10 @@ public class TranslateHelper
 
     public void Reload()
     {
+        Task.Factory.StartNew(() =>
+        {
+            cambridgeTranslator.Reset();
+        });
         foreach (var translator in translators)
         {
             Task.Factory.StartNew(() =>

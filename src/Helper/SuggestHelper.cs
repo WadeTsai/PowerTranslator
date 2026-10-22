@@ -20,21 +20,27 @@ public class SuggestHelper
     private HttpClient client;
     public SuggestHelper(IPublicAPI api)
     {
-        client = new HttpClient(UtilsFun.httpClientDefaultHandler);
+        client = BuildClient();
         this.api = api;
+        UtilsFun.onHttpDefaultHandlerChange += () => client = BuildClient();
+    }
+    private static HttpClient BuildClient()
+    {
+        return new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
     }
     public List<ResultItem> QuerySuggest(string query)
     {
 
-        var data = new { kw = query };
+        KeyValuePair<string, string>[] data = [new("kw", query)];
         try
         {
-            var res = client.PostAsync("https://fanyi.baidu.com/sug",
-                                        new StringContent(data.toFormDataBodyString(),
-                                        new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded")))
+            var res = client.PostAsync("https://fanyi.baidu.com/sug", data.ToFormContent())
                                         .GetAwaiter()
                                         .GetResult();
-            var sug = UtilsFun.ParseJson<SuggestInterface>(res.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            var sug = UtilsFun.ParseJson(res.Content.ReadAsStringAsync().GetAwaiter().GetResult(), Protocol.TranslatorJsonContext.Default.SuggestInterface);
             if (sug == null || sug.data == null || sug.data.Length == 0)
                 return new List<ResultItem>();
             var result = new List<ResultItem>();

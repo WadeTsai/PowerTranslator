@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using PowerTranslatorExtension.Protocol;
 using PowerTranslatorExtension.Service.Youdao.Utils;
@@ -104,13 +103,11 @@ public class BackUpTranslator : ITranslator, IDisposable
         fromLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(fromLan);
         toLan = YoudaoUtils.Instance.GetYoudaoLanguageCode(toLan);
 
-        var data = new { q = src, from = fromLan, to = toLan }.toFormDataBodyString();
-        var response = client.PostAsync(
-            "https://aidemo.youdao.com/trans",
-            new StringContent(data, new MediaTypeHeaderValue("application/x-www-form-urlencoded")))
+        KeyValuePair<string, string>[] data = [new("q", src), new("from", fromLan), new("to", toLan)];
+        var response = client.PostAsync("https://aidemo.youdao.com/trans", data.ToFormContent())
             .GetAwaiter().GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        return UtilsFun.ParseJson<TranslateResult>(content);
+        return UtilsFun.ParseJson(content, TranslatorJsonContext.Default.YoudaoBackupResult);
     }
 
     public void Dispose()
