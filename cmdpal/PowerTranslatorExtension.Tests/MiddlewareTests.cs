@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerTranslatorExtension.Middleware.Alias;
 using PowerTranslatorExtension.Middleware.LanguageCodeHelper;
-using PowerTranslatorExtension.Service.Youdao.Utils;
 
 namespace PowerTranslatorExtension.Tests;
 
@@ -18,18 +17,6 @@ public class MiddlewareTests
 
         Assert.AreEqual("zh-Hans", middleware.GetCultureFromAlias("zhs"));
         Assert.AreEqual("en", middleware.GetCultureFromAlias("en"));
-    }
-
-    [TestMethod]
-    [DataRow("zh-Hans", "zh-CHS")]
-    [DataRow("zh-CN", "zh-CHS")]
-    [DataRow("zh-TW", "zh-CHT")]
-    [DataRow("zh", "zh-CHS")]
-    [DataRow("en-US", "en")]
-    [DataRow("ja", "ja")]
-    public void YoudaoUtils_MapsCultureNamesToApiLanguageCodes(string input, string expected)
-    {
-        Assert.AreEqual(expected, YoudaoUtils.Instance.GetYoudaoLanguageCode(input));
     }
 
     [TestMethod]

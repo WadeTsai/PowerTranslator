@@ -2,7 +2,6 @@ using System.Linq;
 using Wox.Plugin;
 using Wox.Plugin.Logger;
 using Translator.Utils;
-using System.Windows.Media;
 using Translator.Protocol;
 namespace Translator;
 
@@ -22,13 +21,12 @@ public class TranslateHelper
         public string toLan;
     }
     public const string toLanSplit = "->";
-    public bool inited => this.translators.Count >= 3 && (this.translators[0] != null || this.translators[1] != null);
+    public bool inited => this.translators.Any(t => t != null);
     private object initLock = new Object();
     private long lastInitTime = 0;
     private IPublicAPI publicAPI;
     private List<ITranslator?> translators;
-    private List<Type> translatorGenerators;
-    private Service.Cambridge.CambridgeTranslator cambridgeTranslator;
+    private List<(string name, Func<ITranslator> create)> translatorGenerators;
     private bool isSpeaking = false;
     private bool isIniting = false;
     public string defaultLanguageKey = "auto";
@@ -40,17 +38,15 @@ public class TranslateHelper
     );
     public TranslateHelper(IPublicAPI publicAPI, string defaultLanguageKey = "auto")
     {
-        translatorGenerators = new List<Type>{
-            typeof(Service.Youdao.V2.YoudaoTranslator),
-            typeof(Service.Youdao.old.YoudaoTranslator),
-            typeof(Service.DeepL.DeepLTranslator),
-            typeof(Service.Youdao.Backup.BackUpTranslator),
+        translatorGenerators = new List<(string, Func<ITranslator>)>{
+            // English words / short phrases: offline ECDICT (Traditional Chinese) + dictionaryapi.dev (English).
+            ("ECDICT", () => new Service.Dictionary.WordLookupTranslator(() => SettingHelper.Instance.enableEnglishDefinitions)),
+            // Sentences and everything the dictionaries cannot answer.
+            ("DeepL", () => new Service.DeepL.DeepLTranslator()),
         };
-        // One slot per generator; there used to be fewer slots than generators, so the backup translator never loaded.
         this.translators = translatorGenerators.Select(_ => (ITranslator?)null).ToList();
         // make sure do it before init translator
         UtilsFun.ChangeDefaultHttpHandlerProxy(SettingHelper.Instance.useSystemProxy, false);
-        this.cambridgeTranslator = new Service.Cambridge.CambridgeTranslator();
 
         this.InitTranslator();
         this.publicAPI = publicAPI;
@@ -84,25 +80,8 @@ public class TranslateHelper
             toLan = cultureAliasHelper.GetCultureFromAlias(_toLan)
         };
     }
-    private ITranslateResult? TranslateWithCambridge(string text, string toLan)
-    {
-        if (!SettingHelper.Instance.useCambridgeTraditional)
-            return null;
-        try
-        {
-            return cambridgeTranslator.Translate(text, toLan, "en");
-        }
-        catch (Exception err)
-        {
-            Log.Error($"Cambridge: {err.Message}", typeof(TranslateHelper));
-            return null;
-        }
-    }
     private ITranslateResult? Translate(string text, string toLan)
     {
-        var cambridgeResult = TranslateWithCambridge(text, toLan);
-        if (cambridgeResult != null)
-            return cambridgeResult;
         return translators.Enumerate().FirstNotNoneCast((data) =>
         {
             var (idx, it) = data;
@@ -111,7 +90,7 @@ public class TranslateHelper
                 if (it == null)
                 {
 
-                    throw new Exception($"{this.translatorGenerators[idx].FullName} is null");
+                    throw new Exception($"{this.translatorGenerators[idx].name} is null");
                 }
                 return it?.Translate(text, toLan, "auto");
             }
@@ -180,43 +159,41 @@ public class TranslateHelper
         return res;
     }
 
+    /// <summary>Reads the text aloud with the built-in Windows speech engine (SAPI).</summary>
     public void Read(string? txt)
     {
         if (isSpeaking || txt == null || txt.Length == 0)
             return;
-        Task.Factory.StartNew(() =>
+        var thread = new Thread(() =>
         {
             this.isSpeaking = true;
             try
             {
-                var uri = new Uri($"https://dict.youdao.com/dictvoice?audio={Uri.EscapeDataString(txt.removeSpecialCharacter())}&le=zh");
-                uri.fixChinese();
-
-                MediaPlayer player = new MediaPlayer();
-                player.Stop();
-                player.Volume = 1;
-                player.Open(uri);
-                TimeSpan tt = TimeSpan.Zero;
-                player.Play();
-                uint waitTime = 0;
-                while (tt == player.Position)
-                {
-                    if (waitTime > 3 * 1000)
-                        return;
-                    Thread.Sleep(100);
-                    waitTime += 100;
-                }
-                while (tt != player.Position)
-                {
-                    tt = player.Position;
-                    Thread.Sleep(300);
-                }
+                var type = Type.GetTypeFromProgID("SAPI.SpVoice");
+                if (type == null)
+                    return;
+                dynamic voice = Activator.CreateInstance(type)!;
+                // Prefer a Traditional Chinese (zh-TW, LCID 0x404) voice for Chinese text, an English one otherwise.
+                var language = Service.DeepL.DeepLTranslator.ContainsCjk(txt) ? "404" : "409";
+                dynamic tokens = voice.GetVoices($"Language={language}", "");
+                if (tokens.Count > 0)
+                    voice.Voice = tokens.Item(0);
+                voice.Speak(txt, 0);
+            }
+            catch (Exception err)
+            {
+                Log.Warn($"Read failed: {err.Message}", typeof(TranslateHelper));
             }
             finally
             {
                 this.isSpeaking = false;
             }
-        });
+        })
+        {
+            IsBackground = true,
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
     }
 
     public bool InitTranslator()
@@ -234,17 +211,16 @@ public class TranslateHelper
             {
                 return Task.Factory.StartNew(() =>
                 {
-                    Log.Info($"start init {tp.Namespace} {tp.Name} {idx}", tp);
+                    Log.Info($"start init {tp.name} {idx}", typeof(TranslateHelper));
                     if (translators[idx] != null)
                         return;
                     try
                     {
-                        var tran = tp.GetConstructor(Type.EmptyTypes)?.Invoke(null);
-                        this.translators[idx] = tran as ITranslator;
+                        this.translators[idx] = tp.create();
                     }
                     catch (Exception ex)
                     {
-                        Log.Error($"{idx} Error occurred: {ex.InnerException!.Message}", typeof(Translator));
+                        Log.Error($"{idx} Error occurred: {(ex.InnerException ?? ex).Message}", typeof(Translator));
                     }
                 });
             });
@@ -278,10 +254,6 @@ public class TranslateHelper
 
     public void Reload()
     {
-        Task.Factory.StartNew(() =>
-        {
-            cambridgeTranslator.Reset();
-        });
         foreach (var translator in translators)
         {
             Task.Factory.StartNew(() =>

@@ -98,7 +98,7 @@
   <data name="Setting_DefaultTargetLanguage_Label" xml:space="preserve"><value>Default target language</value></data>
   <data name="Setting_DefaultTargetLanguage_Desc" xml:space="preserve"><value>Used when the query does not contain `-&gt;`</value></data>
   <data name="Setting_EnableSuggest_Label" xml:space="preserve"><value>Enable search suggestions</value></data>
-  <data name="Setting_EnableSuggest_Desc" xml:space="preserve"><value>Append Baidu autocomplete suggestions after translation results</value></data>
+  <data name="Setting_EnableSuggest_Desc" xml:space="preserve"><value>Append offline word completions (with Traditional Chinese meanings from ECDICT) after translation results</value></data>
   <data name="Setting_EnableAutoRead_Label" xml:space="preserve"><value>Automatically read result</value></data>
   <data name="Setting_EnableAutoRead_Desc" xml:space="preserve"><value>Play TTS for the first result after each query</value></data>
   <data name="Setting_ShowOriginalQuery_Label" xml:space="preserve"><value>Show original query</value></data>
@@ -115,8 +115,8 @@
   <data name="Setting_UseSystemProxy_Desc" xml:space="preserve"><value>Route HTTP requests through the Windows default proxy</value></data>
   <data name="Setting_EnableCodeMode_Label" xml:space="preserve"><value>Translate snake_case / camelCase words</value></data>
   <data name="Setting_EnableCodeMode_Desc" xml:space="preserve"><value>Split snake/camel words into spaces before translating</value></data>
-  <data name="Setting_UseCambridgeTraditional_Label" xml:space="preserve"><value>Use Cambridge Dictionary for Traditional Chinese</value></data>
-  <data name="Setting_UseCambridgeTraditional_Desc" xml:space="preserve"><value>Look up English words in the Cambridge English-Chinese (Traditional) dictionary when the target is Traditional Chinese or auto</value></data>
+  <data name="Setting_EnableEnglishDefinitions_Label" xml:space="preserve"><value>Show English definitions</value></data>
+  <data name="Setting_EnableEnglishDefinitions_Desc" xml:space="preserve"><value>Look up English words in the free English dictionary (dictionaryapi.dev) and show the definitions after the ECDICT Traditional Chinese meanings</value></data>
 
   <!-- Language display names (keys match SettingsManager.Languages) -->
   <data name="Language_auto" xml:space="preserve"><value>Auto</value></data>
@@ -134,7 +134,7 @@
   <data name="Language_he" xml:space="preserve"><value>Hebrew</value></data>
 
   <!-- Dictionary provider display names -->
-  <data name="Dictionary_Youdao" xml:space="preserve"><value>Youdao</value></data>
   <data name="Dictionary_Oxford" xml:space="preserve"><value>Oxford</value></data>
   <data name="Dictionary_Cambridge" xml:space="preserve"><value>Cambridge</value></data>
+  <data name="Dictionary_CambridgeTraditional" xml:space="preserve"><value>Cambridge English-Chinese (Traditional)</value></data>
 </root>

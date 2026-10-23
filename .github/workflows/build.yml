@@ -21,6 +21,16 @@ jobs:
           $json = Get-Content -path .\plugin.json -Raw | ConvertFrom-Json
           echo "PLUGIN_VERSION=$($json.Version)" >> $env:GITHUB_ENV
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build ECDICT data
+        run: |
+          pip install opencc
+          python tools/ecdict/build_ecdict.py
+
       - name: Package
         run: |
           dotnet pack -p:Platform=x64

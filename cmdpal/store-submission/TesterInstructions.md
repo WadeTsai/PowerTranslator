@@ -53,10 +53,10 @@ commands inside Command Palette after installation.
 ### 1. Basic translation
 1. Open Command Palette, select **Translator**, press `Enter`.
 2. Type `hello` and wait ~1 second.
-3. Expected: one or more translation results appear (e.g. Chinese rendering
-   of "hello"). The first result is sourced from Youdao Web API; if the
-   primary service is unreachable the extension falls back to DeepL or a
-   backup Youdao endpoint.
+3. Expected: the Traditional Chinese meanings of "hello" from the bundled
+   offline ECDICT dictionary, followed by English definitions from the
+   Free Dictionary API. Sentences (e.g. `how are you today`) are translated
+   with DeepL.
 
 ### 2. Target a specific language
 1. In the Translator page, type `apple -> ja` and wait.
@@ -75,8 +75,8 @@ commands inside Command Palette after installation.
 ### 4. Per-result secondary actions (Ctrl+K)
 1. With a translation result selected, press `Ctrl + K`.
 2. Expected menu items: *Copy subtitle*, *Read aloud*, and (if enabled in
-   settings) *Jump to dictionary*. *Read aloud* streams audio from
-   `dict.youdao.com` via `Windows.Media.Playback.MediaPlayer`.
+   settings) *Jump to dictionary*. *Read aloud* uses the built-in Windows
+   speech synthesizer (no network).
 
 ### 5. History page
 1. Run several translations in sequence.
@@ -90,20 +90,18 @@ commands inside Command Palette after installation.
    **Translator** entry (the extension contributes a settings form).
 2. Expected configurable options: default target language, second target
    language, search suggestions toggle, auto-read toggle, show original
-   query, jump-to-dictionary toggle + dictionary choice, system proxy
-   toggle, snake/camel-case word translation toggle.
+   query, jump-to-dictionary toggle + dictionary choice, second language,
+   system proxy toggle, snake/camel-case word translation toggle, English
+   definitions toggle.
 
 ## Expected network endpoints
 
-The extension performs outbound HTTPS requests only to the following public
-endpoints. They are required for translation results to appear:
+English word lookups (Traditional Chinese meanings and search suggestions)
+use the offline ECDICT dictionary bundled in the package. The extension
+performs outbound HTTPS requests only to the following public endpoints:
 
-- `https://dict.youdao.com/webtranslate` — Youdao web translation API (primary)
-- `https://dict.youdao.com/dictvoice` — Youdao TTS audio for the optional *Read aloud* action
-- `https://fanyi.youdao.com/translate_o` — Youdao legacy translation API (fallback)
-- `https://aidemo.youdao.com/trans` — Youdao backup translation endpoint (fallback)
-- `https://www2.deepl.com/jsonrpc` — DeepL web translation API (fallback)
-- `https://fanyi.baidu.com/sug` — Baidu autocomplete suggestions (only when *Enable search suggestions* is on)
+- `https://api.dictionaryapi.dev/api/v2/entries/en/` — English definitions (only when *Show English definitions* is on)
+- `https://www2.deepl.com/jsonrpc` — DeepL web translation API for sentences
 
 If outbound network access is blocked, the extension will display
 *"result is null, some error happen in translate. check out your
@@ -127,8 +125,8 @@ internally.
 | Symptom | Cause / Fix |
 | --- | --- |
 | Translator does not appear in Command Palette | Command Palette has not re-enumerated extensions. Run `Reload` in Command Palette. |
-| All translations return the error row | Outbound HTTPS to `*.youdao.com`, `*.deepl.com`, `*.baidu.com` is blocked on the test machine. |
-| `Read aloud` produces no sound | `dict.youdao.com/dictvoice` is unreachable, or audio output device is muted. |
+| Sentences return the error row | Outbound HTTPS to `*.deepl.com` is blocked on the test machine (single English words still work offline). |
+| `Read aloud` produces no sound | No speech voice is installed, or the audio output device is muted. |
 | `Translator` row shows *"initializing other apis... please try later"* | First-run initialization is in flight. Type the same query again after ~2 seconds. |
 
 ## Contact

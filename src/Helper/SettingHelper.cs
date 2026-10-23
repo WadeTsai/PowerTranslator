@@ -59,9 +59,9 @@ namespace Translator
 
         public static readonly Dictionary<string, string> DictionaryUrlPatterns = new Dictionary<string, string>
         {
-            { "Youdao", "https://www.youdao.com/result?word={0}&lang=en" },
-            { "Oxford", "https://www.oed.com/search/dictionary/?scope=Entries&q={0}" },
-            { "Cambridge", "https://dictionary.cambridge.org/us/dictionary/english/{0}" }
+            { "Cambridge", "https://dictionary.cambridge.org/us/dictionary/english/{0}" },
+            { "Cambridge English-Chinese (Traditional)", "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/{0}" },
+            { "Oxford", "https://www.oed.com/search/dictionary/?scope=Entries&q={0}" }
         };
 
         public static readonly List<string> languagesKeys = Languages.Keys.ToList();
@@ -79,7 +79,7 @@ namespace Translator
         public string dictUtlPattern = dictUrlPatternValues[0];
         public bool useSystemProxy = true;
         public bool enableCodeMode = true;
-        public bool useCambridgeTraditional = false;
+        public bool enableEnglishDefinitions = true;
         private static SettingHelper? __instance;
         public static SettingHelper Instance
         {
@@ -113,6 +113,7 @@ namespace Translator
                 new PluginAdditionalOption{
                     Key = "EnableSuggest",
                     DisplayLabel = "Enable search suggest",
+                    DisplayDescription = "Offline word completions with Traditional Chinese meanings from ECDICT",
                     Value = true,
                 },
                 new PluginAdditionalOption{
@@ -129,7 +130,7 @@ namespace Translator
                 new PluginAdditionalOption{
                     Key = "EnableJumpDictionary",
                     DisplayLabel = "Show jump to dictionary button",
-                    DisplayDescription= "will add a button to quick jump to dictionary, default is youdao.",
+                    DisplayDescription= "will add a button to quick jump to dictionary, default is Cambridge.",
                     PluginOptionType = PluginAdditionalOption.AdditionalOptionType.CheckboxAndCombobox,
                     Value = false,
                     ComboBoxValue = 0,
@@ -157,10 +158,10 @@ namespace Translator
                     Value = true,
                 },
                 new PluginAdditionalOption{
-                    Key = "UseCambridgeTraditional",
-                    DisplayLabel = "Use Cambridge Dictionary for Traditional Chinese",
-                    DisplayDescription = "Look up English words in the Cambridge English-Chinese (Traditional) dictionary when the target is Traditional Chinese (zht) or auto, default to false",
-                    Value = false,
+                    Key = "EnableEnglishDefinitions",
+                    DisplayLabel = "Show English definitions",
+                    DisplayDescription = "Look up English words in the free English dictionary (dictionaryapi.dev) and show the definitions after the ECDICT Traditional Chinese meanings, default to true",
+                    Value = true,
                 }
             };
         }
@@ -179,7 +180,7 @@ namespace Translator
             enableAutoRead = GetSetting("EnableAutoRead").Value;
             showOriginalQuery = GetSetting("ShowOriginalQuery").Value;
             enableCodeMode = GetSetting("EnableCodeMode").Value;
-            useCambridgeTraditional = settings.AdditionalOptions.FirstOrDefault((set) => set.Key == "UseCambridgeTraditional")?.Value ?? false;
+            enableEnglishDefinitions = settings.AdditionalOptions.FirstOrDefault((set) => set.Key == "EnableEnglishDefinitions")?.Value ?? true;
             var _useSystemProxy = GetSetting("UseSystemProxy").Value;
             if (_useSystemProxy != useSystemProxy)
             {

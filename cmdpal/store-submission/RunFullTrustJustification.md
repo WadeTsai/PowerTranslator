@@ -46,16 +46,17 @@ The extension's runtime behavior is equivalent to a sandboxed app and
 exercises only the following APIs:
 
   - System.Net.Http.HttpClient — outbound HTTPS to public translation
-    endpoints (api.youdao.com, fanyi.youdao.com, www2.deepl.com,
-    fanyi.baidu.com, aidemo.youdao.com). Network access is already
-    declared via the internetClient capability.
+    endpoints (api.dictionaryapi.dev, www2.deepl.com). Network access is
+    already declared via the internetClient capability.
+  - System.IO.RandomAccess — read-only lookups in the bundled offline
+    ECDICT dictionary file (Data\ecdict.bin) inside the package.
   - Windows.ApplicationModel.DataTransfer.Clipboard — user-initiated
     reads (translate clipboard content when the query box is empty)
     and writes (copy a translation result back).
-  - Windows.Media.Playback.MediaPlayer — streaming TTS audio from
-    dict.youdao.com for the optional "Read aloud" command.
-  - System.Security.Cryptography (MD5 for request signing, AES for
-    decrypting the Youdao API response payload).
+  - Windows.Media.SpeechSynthesis + Windows.Media.Playback.MediaPlayer —
+    local text-to-speech for the optional "Read aloud" command.
+  - kernel32!LCMapStringEx — converts Simplified Chinese characters in
+    online results to Traditional Chinese.
   - Microsoft.CommandPalette.Extensions.Toolkit.JsonSettingsManager —
     persists user preferences to the package's own LocalAppData
     container.

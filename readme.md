@@ -13,6 +13,16 @@
 
 一個用於[PowerToysRun](https://github.com/microsoft/PowerToys)的外掛。現已接入多個平臺提供**快速且穩定**的翻譯
 
+### 翻譯來源
+
+| 用途 | 來源 | 說明 |
+|---|---|---|
+| 英文單字/片語 → 繁體中文 | [ECDICT](https://github.com/skywind3000/ECDICT)（MIT） | 離線字典，隨安裝檔附帶；建置時以 OpenCC `s2twp` 轉成繁體（台灣用語） |
+| 英英釋義 | [Free Dictionary API](https://dictionaryapi.dev) | 線上查詢，顯示在中文釋義之後，可在設定關閉 |
+| 句子與其他語言 | DeepL | 字典查無結果時的備援；`auto` 時英文等譯為繁體中文、中日韓文字譯為英文 |
+
+已移除有道、百度、阿里巴巴與劍橋等來源。
+
 ## Index
 
 - [如何使用](#usage)
@@ -26,6 +36,13 @@
 ## 開發命令
 
 專案根目錄的 [justfile](./justfile) 統一了開發、測試和打包命令。執行 `just` 或 `just help` 可檢視完整列表。
+
+ECDICT 資料檔 `data/ecdict.bin`（約 57MB，不納入 git）由 `tools/ecdict/build_ecdict.py` 產生：它會下載固定版本的 ECDICT，再用 OpenCC 轉成繁體。建置時若找不到資料檔會自動嘗試產生，也可以手動執行：
+
+```powershell
+pip install opencc
+just ecdict          # 或 python tools/ecdict/build_ecdict.py
+```
 
 ```powershell
 # 傳統 PowerToys Run 外掛
@@ -84,7 +101,7 @@ just cmdpal-store
 
 - 搜尋建議
 
-  - 根據當前的輸入建議搜尋內容
+  - 根據當前的輸入，從離線 ECDICT 建議英文單字（附繁體中文釋義）
     ![suggest](Images/suggest.gif)
   - 可以在設定裡選擇是否啟用建議, 對應`Enable search suggest`
 
@@ -92,7 +109,7 @@ just cmdpal-store
 
   - 支援朗讀中文, 英文(快捷鍵 ctrl+enter)
     ![read](Images/read.png)
-  - 基於有道 TTS 介面
+  - 使用 Windows 內建語音合成（中文優先使用 zh-TW 語音）
   - 支援自動朗讀結果功能, **預設關閉**, 可以在設定開啟.對應`Automatic reading result`
 
 - 歷史記錄
@@ -151,7 +168,8 @@ ptr add Translator N0I0C0K/PowerTranslator
   ![auto clean](Images/auto_clean.png)
 - 切換預設目標翻譯語言，預設是`auto`
   ![languages](Images/languages.png)
-- `使用劍橋詞典查詢繁體中文`（預設關閉）：目標語言為 `zht` 或 `auto` 時，英文單字與短語（最多 4 個單字）會改用[劍橋英漢（繁體）詞典](https://dictionary.cambridge.org/dictionary/english-chinese-traditional/)查詢；若查無結果或請求失敗，則照常使用其他翻譯服務。
+- 目標語言為 `zht` 或 `auto` 時，英文單字與短語（最多 4 個單字）會先查離線 ECDICT 字典；查無結果才改用 DeepL。
+- `Show English definitions`（預設開啟）：同時向 [Free Dictionary API](https://dictionaryapi.dev) 查詢英英釋義；目標語言為 `en` 時只顯示英英釋義。
 
 ## Issue
 

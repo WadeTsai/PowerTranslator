@@ -41,6 +41,16 @@ jobs:
         with:
           sdk-version: 22621
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build ECDICT data
+        run: |
+          pip install opencc
+          python tools/ecdict/build_ecdict.py
+
       - name: Restore packages
         run: msbuild cmdpal\PowerTranslatorExtension.sln /t:Restore /p:Configuration=Release
 

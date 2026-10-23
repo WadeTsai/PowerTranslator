@@ -12,7 +12,7 @@ namespace Translator
     {
         public string Name => "Translator";
         public static string PluginID => "EY1EBAMTNIWIVLYM039DSOS5MWITDJOD";
-        public string Description => "A simple translation plugin, based on Youdao Translation";
+        public string Description => "A simple translation plugin: offline ECDICT (English -> Traditional Chinese), Free Dictionary API (English definitions) and DeepL";
         public IEnumerable<PluginAdditionalOption> AdditionalOptions => SettingHelper.pluginAdditionalOptions;
         public PluginMetadata queryMetaData;
         public IPublicAPI publicAPI;
@@ -156,7 +156,7 @@ namespace Translator
             {
                 translateHelper = new TranslateHelper(publicAPI, this.settingHelper.defaultLanguageKey);
             });
-            suggestHelper = new Suggest.SuggestHelper(publicAPI);
+            suggestHelper = new Suggest.SuggestHelper();
             historyHelper = new History.HistoryHelper();
             publicAPI.ThemeChanged += this.UpdateIconPath;
             UpdateIconPath(Theme.Light, publicAPI.GetCurrentTheme());

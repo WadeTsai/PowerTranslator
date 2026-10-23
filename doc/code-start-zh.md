@@ -29,9 +29,8 @@
 具體的翻譯實現（通常是網路介面呼叫）
 
 目前已經實現的翻譯介面有：
-- 有道翻譯網頁版本
-- 有道翻譯 api 試用版本（用於 backup）
-- 有道翻譯老版本網頁
+- ECDICT 離線字典（英文 → 繁體中文，`Service/Ecdict`）+ Free Dictionary API 英英釋義（`Service/FreeDictionary`），由 `Service/Dictionary/WordLookupTranslator` 組合
+- DeepL（句子與其他語言的備援）
 
 計劃中的翻譯介面實現：
 - 微軟翻譯

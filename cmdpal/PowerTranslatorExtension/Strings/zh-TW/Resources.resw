@@ -90,7 +90,7 @@
   <data name="Setting_DefaultTargetLanguage_Label" xml:space="preserve"><value>預設目標語言</value></data>
   <data name="Setting_DefaultTargetLanguage_Desc" xml:space="preserve"><value>在查詢未包含 `-&gt;` 時使用</value></data>
   <data name="Setting_EnableSuggest_Label" xml:space="preserve"><value>啟用搜尋建議</value></data>
-  <data name="Setting_EnableSuggest_Desc" xml:space="preserve"><value>在翻譯結果之後附加百度自動完成建議</value></data>
+  <data name="Setting_EnableSuggest_Desc" xml:space="preserve"><value>在翻譯結果之後附加離線單字補全（含 ECDICT 繁體中文釋義）</value></data>
   <data name="Setting_EnableAutoRead_Label" xml:space="preserve"><value>自動朗讀結果</value></data>
   <data name="Setting_EnableAutoRead_Desc" xml:space="preserve"><value>每次查詢後自動朗讀第一筆結果</value></data>
   <data name="Setting_ShowOriginalQuery_Label" xml:space="preserve"><value>顯示原始查詢</value></data>
@@ -107,8 +107,8 @@
   <data name="Setting_UseSystemProxy_Desc" xml:space="preserve"><value>透過 Windows 預設 Proxy 轉送 HTTP 請求</value></data>
   <data name="Setting_EnableCodeMode_Label" xml:space="preserve"><value>翻譯 snake_case / camelCase 單字</value></data>
   <data name="Setting_EnableCodeMode_Desc" xml:space="preserve"><value>翻譯前將 snake/camel 單字依空格拆分</value></data>
-  <data name="Setting_UseCambridgeTraditional_Label" xml:space="preserve"><value>使用劍橋詞典查詢繁體中文</value></data>
-  <data name="Setting_UseCambridgeTraditional_Desc" xml:space="preserve"><value>目標語言為繁體中文或自動時，使用劍橋英漢（繁體）詞典查詢英文單字</value></data>
+  <data name="Setting_EnableEnglishDefinitions_Label" xml:space="preserve"><value>顯示英英釋義</value></data>
+  <data name="Setting_EnableEnglishDefinitions_Desc" xml:space="preserve"><value>使用免費英英字典 (dictionaryapi.dev) 查詢英文單字，並顯示在 ECDICT 繁體中文釋義之後</value></data>
 
   <data name="Language_auto" xml:space="preserve"><value>自動</value></data>
   <data name="Language_zhs" xml:space="preserve"><value>簡體中文</value></data>
@@ -124,7 +124,7 @@
   <data name="Language_it" xml:space="preserve"><value>義大利文</value></data>
   <data name="Language_he" xml:space="preserve"><value>希伯來文</value></data>
 
-  <data name="Dictionary_Youdao" xml:space="preserve"><value>有道</value></data>
   <data name="Dictionary_Oxford" xml:space="preserve"><value>牛津</value></data>
   <data name="Dictionary_Cambridge" xml:space="preserve"><value>劍橋</value></data>
+  <data name="Dictionary_CambridgeTraditional" xml:space="preserve"><value>劍橋英漢（繁體）</value></data>
 </root>

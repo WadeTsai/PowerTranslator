@@ -81,69 +81,12 @@ public class TranslateHelperFlowTests
         Assert.IsEmpty(translator.Calls);
     }
 
-    [TestMethod]
-    public void QueryTranslate_UsesCambridgeFirstWhenEnabled()
-    {
-        var cambridge = new FakeTranslator
-        {
-            Result = new FakeTranslateResult(new ResultItem { Title = "蘋果", SubTitle = "apple" }),
-        };
-        var translator = new FakeTranslator();
-        var helper = CreateHelper([translator], defaultLanguage: "zht", cambridge: cambridge, cambridgeEnabled: true);
-
-        var results = helper.QueryTranslate("apple");
-
-        Assert.HasCount(1, results);
-        Assert.AreEqual("蘋果", results[0].Title);
-        Assert.HasCount(1, cambridge.Calls);
-        AssertCall(cambridge.Calls[0], "apple", "zh-Hant", "en");
-        Assert.IsEmpty(translator.Calls);
-    }
-
-    [TestMethod]
-    public void QueryTranslate_FallsBackWhenCambridgeReturnsNull()
-    {
-        var cambridge = new FakeTranslator();
-        var translator = new FakeTranslator
-        {
-            Result = new FakeTranslateResult(new ResultItem { Title = "蘋果", SubTitle = "apple" }),
-        };
-        var helper = CreateHelper([translator], defaultLanguage: "zht", cambridge: cambridge, cambridgeEnabled: true);
-
-        var results = helper.QueryTranslate("apple");
-
-        Assert.HasCount(1, results);
-        Assert.HasCount(1, cambridge.Calls);
-        Assert.HasCount(1, translator.Calls);
-    }
-
-    [TestMethod]
-    public void QueryTranslate_SkipsCambridgeWhenDisabled()
-    {
-        var cambridge = new FakeTranslator
-        {
-            Result = new FakeTranslateResult(new ResultItem { Title = "蘋果", SubTitle = "apple" }),
-        };
-        var translator = new FakeTranslator
-        {
-            Result = new FakeTranslateResult(new ResultItem { Title = "蘋果", SubTitle = "apple" }),
-        };
-        var helper = CreateHelper([translator], defaultLanguage: "zht", cambridge: cambridge, cambridgeEnabled: false);
-
-        _ = helper.QueryTranslate("apple");
-
-        Assert.IsEmpty(cambridge.Calls);
-        Assert.HasCount(1, translator.Calls);
-    }
-
     private static TranslateHelper CreateHelper(
         IEnumerable<ITranslator> translators,
         string defaultLanguage,
-        bool codeModeEnabled = false,
-        ITranslator? cambridge = null,
-        bool cambridgeEnabled = false)
+        bool codeModeEnabled = false)
     {
-        return new TranslateHelper(translators, defaultLanguage, () => codeModeEnabled, cambridge, () => cambridgeEnabled);
+        return new TranslateHelper(translators, defaultLanguage, () => codeModeEnabled);
     }
 
     private static void AssertCall(FakeTranslator.Call call, string text, string targetLanguage, string sourceLanguage)

@@ -29,6 +29,8 @@
     <ItemGroup>
         <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>
+    <!-- Offline ECDICT dictionary (English -> Traditional Chinese), packaged as Data\ecdict.bin. -->
+    <Import Project="..\..\tools\ecdict\Ecdict.targets" />
     <!-- Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
     Tools extension to be activated for this project even if the Windows App SDK Nuget
     package has not yet been restored. -->

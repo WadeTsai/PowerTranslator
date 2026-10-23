@@ -30,9 +30,9 @@ public class SettingsManager : JsonSettingsManager
 
     public static readonly Dictionary<string, string> DictionaryUrlPatterns = new()
     {
-        { "Youdao", "https://www.youdao.com/result?word={0}&lang=en" },
-        { "Oxford", "https://www.oed.com/search/dictionary/?scope=Entries&q={0}" },
         { "Cambridge", "https://dictionary.cambridge.org/us/dictionary/english/{0}" },
+        { "CambridgeTraditional", "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/{0}" },
+        { "Oxford", "https://www.oed.com/search/dictionary/?scope=Entries&q={0}" },
     };
 
     private static string Namespaced(string property) => $"{_namespace}.{property}";
@@ -53,7 +53,7 @@ public class SettingsManager : JsonSettingsManager
     private readonly ChoiceSetSetting _secondTargetLanguage;
     private readonly ToggleSetting _useSystemProxy;
     private readonly ToggleSetting _enableCodeMode;
-    private readonly ToggleSetting _useCambridgeTraditional;
+    private readonly ToggleSetting _enableEnglishDefinitions;
 
     public string DefaultLanguageKey => _defaultTargetLanguage.Value ?? "auto";
     public string SecondLanguageKey => _secondTargetLanguage.Value ?? "auto";
@@ -61,8 +61,8 @@ public class SettingsManager : JsonSettingsManager
     {
         get
         {
-            var key = _dictionaryPattern.Value ?? "Youdao";
-            return DictionaryUrlPatterns.TryGetValue(key, out var v) ? v : DictionaryUrlPatterns["Youdao"];
+            var key = _dictionaryPattern.Value ?? "Cambridge";
+            return DictionaryUrlPatterns.TryGetValue(key, out var v) ? v : DictionaryUrlPatterns["Cambridge"];
         }
     }
     public bool EnableSuggest => _enableSuggest.Value;
@@ -72,7 +72,7 @@ public class SettingsManager : JsonSettingsManager
     public bool EnableSecondLanguage => _enableSecondLanguage.Value;
     public bool UseSystemProxy => _useSystemProxy.Value;
     public bool EnableCodeMode => _enableCodeMode.Value;
-    public bool UseCambridgeTraditional => _useCambridgeTraditional.Value;
+    public bool EnableEnglishDefinitions => _enableEnglishDefinitions.Value;
 
     public event Action? OnSettingsChanged;
 
@@ -143,11 +143,11 @@ public class SettingsManager : JsonSettingsManager
             Loc.Get("Setting_EnableCodeMode_Desc"),
             true);
 
-        _useCambridgeTraditional = new(
-            Namespaced("UseCambridgeTraditional"),
-            Loc.Get("Setting_UseCambridgeTraditional_Label"),
-            Loc.Get("Setting_UseCambridgeTraditional_Desc"),
-            false);
+        _enableEnglishDefinitions = new(
+            Namespaced("EnableEnglishDefinitions"),
+            Loc.Get("Setting_EnableEnglishDefinitions_Label"),
+            Loc.Get("Setting_EnableEnglishDefinitions_Desc"),
+            true);
 
         FilePath = SettingsJsonPath();
         Settings.Add(_defaultTargetLanguage);
@@ -160,7 +160,7 @@ public class SettingsManager : JsonSettingsManager
         Settings.Add(_secondTargetLanguage);
         Settings.Add(_useSystemProxy);
         Settings.Add(_enableCodeMode);
-        Settings.Add(_useCambridgeTraditional);
+        Settings.Add(_enableEnglishDefinitions);
 
         LoadSettings();
         _lastUseSystemProxy = UseSystemProxy;

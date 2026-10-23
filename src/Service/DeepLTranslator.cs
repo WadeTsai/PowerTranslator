@@ -31,6 +31,15 @@ public class DeepLTranslateResult : ITranslateResult
         return Result != null;
     }
 
+    /// <summary>Guarantees Traditional characters even if DeepL ignores the regional variant.</summary>
+    public void ConvertToTraditional()
+    {
+        foreach (var translation in Result?.Translations ?? [])
+            foreach (var beam in translation.Beams)
+                foreach (var sentence in beam.Sentences)
+                    sentence.Text = ChineseConverter.ToTraditional(sentence.Text);
+    }
+
     public override IEnumerable<ResultItem>? Transform()
     {
         if (!IsSuccess())
@@ -172,6 +181,11 @@ public class Params
 
         [JsonPropertyName("textType")]
         public required string TextType { get; set; }
+
+        // e.g. "zh-Hant" / "zh-Hans"; the web client sends it for regional target variants.
+        [JsonPropertyName("regionalVariant")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? RegionalVariant { get; set; }
     }
 
     [JsonPropertyName("jobs")]
@@ -195,8 +209,9 @@ public class Params
     [JsonPropertyName("timestamp")]
     public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); // 使用當前時間戳
 
-    public Params(string targetLan, string? srcLan, string text)
+    public Params(string targetLan, string? srcLan, string text, string? regionalVariant = null)
     {
+        this.commonJobParams.RegionalVariant = regionalVariant;
         this.Lang = new Language
         {
             TargetLang = targetLan,
@@ -365,22 +380,52 @@ public class DeepLTranslator : ITranslator
     }
 
 
+    /// <summary>
+    /// Maps a culture name to DeepL's target language and regional variant.
+    /// "auto" translates CJK text to English and everything else to Traditional Chinese.
+    /// </summary>
+    public static (string TargetLang, string? RegionalVariant) ResolveTarget(string src, string toLan)
+    {
+        var target = toLan.Trim();
+        if (target.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            target = ContainsCjk(src) ? "en" : "zh-Hant";
+        if (ChineseConverter.IsTraditionalTarget(target))
+            return ("ZH", "zh-Hant");
+        if (target.Equals("zh-Hans", StringComparison.OrdinalIgnoreCase)
+            || target.Equals("zhs", StringComparison.OrdinalIgnoreCase)
+            || target.Equals("zh-CN", StringComparison.OrdinalIgnoreCase))
+            return ("ZH", "zh-Hans");
+        var dash = target.IndexOf('-');
+        return ((dash > 0 ? target[..dash] : target).ToUpperInvariant(), null);
+    }
+
+    public static bool ContainsCjk(string text)
+    {
+        foreach (var c in text)
+        {
+            if (c is (>= '\u3040' and <= '\u30ff') or (>= '\u3400' and <= '\u9fff') or (>= '\uac00' and <= '\ud7af') or (>= '\uf900' and <= '\ufaff'))
+                return true;
+        }
+        return false;
+    }
+
     public override DeepLTranslateResult? Translate(string src, string toLan, string? fromLan)
     {
-        if (toLan == "auto")
-            toLan = "en";
+        var (targetLang, variant) = ResolveTarget(src, toLan);
         if (fromLan == "auto")
             fromLan = null;
-        var body = new DeepLTranslateRequestBody(new Params(toLan, fromLan, src));
+        var body = new DeepLTranslateRequestBody(new Params(targetLang, fromLan, src, variant));
         var bodyStr = JsonSerializer.Serialize(body, TranslatorJsonContext.Default.DeepLTranslateRequestBody);
         var response = this.client.PostAsync(apiEndPoint, new StringContent(bodyStr, Encoding.UTF8, "application/json"))
                                             .GetAwaiter()
                                             .GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         var res = UtilsFun.ParseJson(content, TranslatorJsonContext.Default.DeepLTranslateResult);
-        if (res != null && res.IsSuccess())
-            return res;
-        return null;
+        if (res == null || !res.IsSuccess())
+            return null;
+        if (variant == "zh-Hant")
+            res.ConvertToTraditional();
+        return res;
     }
 
     public override void Reset()

@@ -36,8 +36,10 @@ The following data is processed **entirely on your own device** and never sent t
 
 To perform translation, the Extension sends the text you choose to translate to a third-party translation API of your choice. Currently supported providers include:
 
-- **Youdao Translate** ([privacy policy](https://c.youdao.com/dict/law/youdao_dict_privacy.html))
-- **DeepL** ([privacy policy](https://www.deepl.com/privacy/))
+- **Free Dictionary API** (https://dictionaryapi.dev) — receives single English words or short phrases for English definitions (can be turned off in settings)
+- **DeepL** ([privacy policy](https://www.deepl.com/privacy/)) — receives sentences and text the offline dictionary cannot answer
+
+English word lookups to Traditional Chinese use the bundled offline ECDICT dictionary and never leave your device.
 
 When you use these services:
 
@@ -97,8 +99,10 @@ For privacy-related questions, please open an issue in the repository above.
 
 為執行翻譯，本擴充功能會將您選擇翻譯的文本傳送至您指定的第三方翻譯 API。目前支援的服務提供商包括：
 
-- **有道翻譯**（[隱私政策](https://ai.youdao.com/DOCSIRMA/html/trans/price/wbfy/index.html)）
-- **DeepL**（[隱私政策](https://www.deepl.com/zh/privacy/)）
+- **Free Dictionary API**（https://dictionaryapi.dev）—— 接收單一英文單字或短語以取得英英釋義（可在設定中關閉）
+- **DeepL**（[隱私政策](https://www.deepl.com/zh/privacy/)）—— 接收句子及離線字典無法回答的文本
+
+英文單字的繁體中文查詢使用內建的離線 ECDICT 字典，不會離開您的裝置。
 
 當您使用上述服務時：
 

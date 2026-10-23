@@ -17,6 +17,14 @@ info:
     dotnet --info
     just --version
 
+# Generate the offline ECDICT (English -> Traditional Chinese) data file data/ecdict.bin. Needs `pip install opencc`.
+ecdict:
+    python tools/ecdict/build_ecdict.py
+
+# Regenerate data/ecdict.bin even if it already exists.
+ecdict-rebuild:
+    python tools/ecdict/build_ecdict.py --force
+
 # Build the legacy PowerToys Run plugin. Output: bin/output_<platform>/.
 legacy-build platform="x64" configuration="Debug":
     dotnet build {{ legacy_project }} -c {{ configuration }} -p:Platform={{ platform }}

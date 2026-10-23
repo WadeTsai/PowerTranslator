@@ -2,7 +2,6 @@ using Wox.Plugin.Logger;
 using System.Windows;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using System.Reflection;
 using System.Net.Http;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -165,32 +164,6 @@ namespace Translator.Utils
             }
         }
 
-        /// <summary>
-        /// Fixed Chinese address problems caused by URIs
-        /// In the Uri, the Chinese is automatically decoded and MediaPlayer cannot load the correct url
-        /// </summary>
-        /// <param name="obj"></param>
-        public static void fixChinese(this Uri obj)
-        {
-            string url = obj.OriginalString;
-            var type = obj.GetType();
-            var property = type?.GetField("_info", BindingFlags.NonPublic | BindingFlags.Instance);
-            var info = property?.GetValue(obj);
-            if (info == null)
-                return;
-            var infoType = info.GetType();
-            var offset = infoType?.GetField("Offset")?.GetValue(info);
-            var offsetType = offset?.GetType();
-
-            offsetType?.GetField("End")?.SetValue(offset, (ushort)url.Length);
-            offsetType?.GetField("Fragment")?.SetValue(offset, (ushort)url.Length);
-
-            infoType?.GetField("Offset")?.SetValue(info, offset);
-            infoType?.GetField("String")?.SetValue(info, url);
-
-            type?.GetField("_string", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(obj, url);
-            type?.GetField("_originalUnicodeString", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(obj, null);
-        }
         public static string removeSpecialCharacter(this string str)
         {
             return SpecialCharacterRegex().Replace(str, " ");

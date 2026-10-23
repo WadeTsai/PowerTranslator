@@ -7,6 +7,7 @@ using PowerTranslatorExtension.Protocol;
 using PowerTranslatorExtension.Utils;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Media.SpeechSynthesis;
 namespace PowerTranslatorExtension;
 
 public class TranslateFailedException : Exception
@@ -38,8 +39,6 @@ public class TranslateHelper
     private long lastInitTime;
     private List<ITranslator> translators;
     private readonly Func<bool> isCodeModeEnabled;
-    private readonly ITranslator? cambridgeTranslator;
-    private readonly Func<bool> isCambridgeEnabled;
     private bool isSpeaking;
     public string defaultLanguageKey = "auto";
     private Middleware.Alias.CultureAliasMiddleware cultureAliasHelper = new(
@@ -51,15 +50,13 @@ public class TranslateHelper
     public TranslateHelper(string defaultLanguageKey = "auto")
         : this(
             [
-                new Service.Youdao.V2.YoudaoTranslator(),
-                new Service.Youdao.Old.YoudaoTranslator(),
+                // English words / short phrases: offline ECDICT (Traditional Chinese) + dictionaryapi.dev (English).
+                new Service.Dictionary.WordLookupTranslator(() => SettingsManager.Instance.EnableEnglishDefinitions),
+                // Sentences and everything the dictionaries cannot answer.
                 new Service.DeepL.DeepLTranslator(),
-                new Service.Youdao.Backup.BackUpTranslator(),
             ],
             defaultLanguageKey,
-            () => SettingsManager.Instance.EnableCodeMode,
-            new Service.Cambridge.CambridgeTranslator(),
-            () => SettingsManager.Instance.UseCambridgeTraditional)
+            () => SettingsManager.Instance.EnableCodeMode)
     {
         UtilsFun.onHttpDefaultHandlerChange += this.Reload;
     }
@@ -67,9 +64,7 @@ public class TranslateHelper
     internal TranslateHelper(
         IEnumerable<ITranslator> translators,
         string defaultLanguageKey,
-        Func<bool> isCodeModeEnabled,
-        ITranslator? cambridgeTranslator = null,
-        Func<bool>? isCambridgeEnabled = null)
+        Func<bool> isCodeModeEnabled)
     {
         ArgumentNullException.ThrowIfNull(translators);
         ArgumentNullException.ThrowIfNull(isCodeModeEnabled);
@@ -77,8 +72,6 @@ public class TranslateHelper
         this.translators = translators.ToList();
         this.defaultLanguageKey = defaultLanguageKey;
         this.isCodeModeEnabled = isCodeModeEnabled;
-        this.cambridgeTranslator = cambridgeTranslator;
-        this.isCambridgeEnabled = isCambridgeEnabled ?? (() => false);
     }
 
     public TranslateTarget ParseRawSrc(string src)
@@ -107,28 +100,11 @@ public class TranslateHelper
             toLan = cultureAliasHelper.GetCultureFromAlias(_toLan)
         };
     }
-    private ITranslateResult? TranslateWithCambridge(string text, string toLan)
-    {
-        if (cambridgeTranslator == null || !isCambridgeEnabled())
-            return null;
-        try
-        {
-            return cambridgeTranslator.Translate(text, toLan, "en");
-        }
-        catch (Exception err)
-        {
-            UtilsFun.LogMessage($"{cambridgeTranslator.Name}: {err.Message}");
-            return null;
-        }
-    }
     private ITranslateResult? Translate(string text, string toLan)
     {
         translateLock.EnterReadLock();
         try
         {
-            var cambridgeResult = TranslateWithCambridge(text, toLan);
-            if (cambridgeResult != null)
-                return cambridgeResult;
             return translators.FirstNotNoneCast((it) =>
             {
                 try
@@ -247,7 +223,7 @@ public class TranslateHelper
             translateLock.EnterWriteLock();
             try
             {
-                foreach (var translator in cambridgeTranslator == null ? translators : translators.Append(cambridgeTranslator))
+                foreach (var translator in translators)
                 {
                     try
                     {
@@ -266,6 +242,7 @@ public class TranslateHelper
         });
     }
 
+    /// <summary>Reads the text aloud with the built-in Windows speech synthesizer.</summary>
     public void Read(string? txt)
     {
         if (isSpeaking || string.IsNullOrEmpty(txt))
@@ -276,11 +253,13 @@ public class TranslateHelper
             MediaPlayer? player = null;
             try
             {
-                var uri = new Uri($"https://dict.youdao.com/dictvoice?audio={Uri.EscapeDataString(txt.removeSpecialCharacter())}&le=zh");
-                uri.fixChinese();
+                using var synthesizer = new SpeechSynthesizer();
+                if (PickVoice(txt) is { } voice)
+                    synthesizer.Voice = voice;
+                var stream = synthesizer.SynthesizeTextToStreamAsync(txt).AsTask().GetAwaiter().GetResult();
                 player = new MediaPlayer
                 {
-                    Source = MediaSource.CreateFromUri(uri),
+                    Source = MediaSource.CreateFromStream(stream, stream.ContentType),
                     Volume = 1.0,
                 };
                 var ended = new ManualResetEventSlim(false);
@@ -291,7 +270,7 @@ public class TranslateHelper
                     ended.Set();
                 };
                 player.Play();
-                ended.Wait(TimeSpan.FromSeconds(15));
+                ended.Wait(TimeSpan.FromSeconds(30));
             }
             catch (Exception ex)
             {
@@ -303,5 +282,21 @@ public class TranslateHelper
                 isSpeaking = false;
             }
         });
+    }
+
+    // Prefer a Taiwanese voice for Chinese text and an English voice otherwise; fall back to the system default.
+    private static VoiceInformation? PickVoice(string text)
+    {
+        string[] preferred = Service.DeepL.DeepLTranslator.ContainsCjk(text)
+            ? ["zh-TW", "zh-HK", "zh"]
+            : ["en-US", "en"];
+        var voices = SpeechSynthesizer.AllVoices;
+        foreach (var lang in preferred)
+        {
+            var voice = voices.FirstOrDefault(v => v.Language.StartsWith(lang, StringComparison.OrdinalIgnoreCase));
+            if (voice != null)
+                return voice;
+        }
+        return null;
     }
 }

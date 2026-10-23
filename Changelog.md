@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- 英文單字/片語改用離線 [ECDICT](https://github.com/skywind3000/ECDICT) 查詢繁體中文釋義（建置時以 OpenCC `s2twp` 轉換，隨安裝檔附帶）
+- 新增 [Free Dictionary API](https://dictionaryapi.dev) 英英釋義（設定 `Show English definitions`，預設開啟）
+- 句子改由 DeepL 翻譯；`auto` 時英文等譯為繁體中文，並強制輸出繁體字
+- 搜尋建議改用離線 ECDICT，朗讀改用 Windows 內建語音合成
+- 跳轉字典預設改為劍橋，新增劍橋英漢（繁體）
+
+### Removed
+- 移除有道（含 TTS）、百度建議、阿里巴巴翻譯與劍橋線上查詢
+
 ## [0.12.0] - 2025-06-09
 
 ### Added

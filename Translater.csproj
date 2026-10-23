@@ -29,6 +29,8 @@
         <Compile Remove="./cmdpal/**/*" />
         <!-- Remove cmdpal folder -->
     </ItemGroup>
+    <!-- Offline ECDICT dictionary (English -> Traditional Chinese), copied to Translator\Data\ecdict.bin. -->
+    <Import Project="./tools/ecdict/Ecdict.targets" />
     <ItemGroup>
         <PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies"
                           Version="0.97.0" />
@@ -40,11 +42,14 @@
             <MySourceFiles Include="$(OutputPath)Translator.dll" />
             <ImagesFile Include="$(OutputPath)Images\*.*" />
             <InstallBashFiles Include="./install.bat" />
+            <EcdictFiles Include="$(OutputPath)Data\*.*" />
         </ItemGroup>
         <Copy SourceFiles="@(MySourceFiles)"
               DestinationFolder="./bin/output_$(Platform)/Translator" />
         <Copy SourceFiles="@(ImagesFile)"
               DestinationFolder="./bin/output_$(Platform)/Translator/Images" />
+        <Copy SourceFiles="@(EcdictFiles)"
+              DestinationFolder="./bin/output_$(Platform)/Translator/Data" />
         <Copy SourceFiles="@(InstallBashFiles)"
               DestinationFolder="./bin/output_$(Platform)" />
     </Target>

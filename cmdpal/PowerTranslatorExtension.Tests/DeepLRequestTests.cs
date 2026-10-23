@@ -32,4 +32,21 @@ public class DeepLRequestTests
         Assert.AreEqual("LMT_handle_jobs", json.RootElement.GetProperty("method").GetString());
         Assert.AreEqual("EN", json.RootElement.GetProperty("params").GetProperty("lang").GetProperty("target_lang").GetString());
     }
+
+    [TestMethod]
+    [DataRow("hello world", "auto", "ZH", "zh-Hant")]
+    [DataRow("你好世界", "auto", "EN", null)]
+    [DataRow("こんにちは", "auto", "EN", null)]
+    [DataRow("hello", "zh-Hant", "ZH", "zh-Hant")]
+    [DataRow("hello", "zh-TW", "ZH", "zh-Hant")]
+    [DataRow("hello", "zh-Hans", "ZH", "zh-Hans")]
+    [DataRow("hello", "ja", "JA", null)]
+    [DataRow("hello", "en-US", "EN", null)]
+    public void ResolveTarget_MapsCultureAndAutoToDeepLTarget(string src, string toLan, string expectedLang, string? expectedVariant)
+    {
+        var (lang, variant) = DeepLTranslator.ResolveTarget(src, toLan);
+
+        Assert.AreEqual(expectedLang, lang);
+        Assert.AreEqual(expectedVariant, variant);
+    }
 }

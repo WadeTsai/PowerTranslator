@@ -1,71 +1,48 @@
-using System.Net.Http;
-using Wox.Plugin;
-using Translator.Utils;
+using Translator.Service.Dictionary;
+using Translator.Service.Ecdict;
+using Wox.Plugin.Logger;
 namespace Translator.Suggest;
 
-public class SuggestInterface
-{
-    public struct SuggestItem
-    {
-        public string k { get; set; }
-        public string v { get; set; }
-    }
-    public int errno { get; set; }
-    public SuggestItem[]? data { get; set; }
-
-}
+/// <summary>Offline word completions with Traditional Chinese glosses from the bundled ECDICT.</summary>
 public class SuggestHelper
 {
-    private IPublicAPI api;
-    private HttpClient client;
-    public SuggestHelper(IPublicAPI api)
+    public const int MaxSuggestions = 5;
+    private readonly Func<EcdictDictionary?> dictionary;
+
+    public SuggestHelper()
+        : this(() => EcdictDictionary.Shared)
     {
-        client = BuildClient();
-        this.api = api;
-        UtilsFun.onHttpDefaultHandlerChange += () => client = BuildClient();
     }
-    private static HttpClient BuildClient()
+
+    internal SuggestHelper(Func<EcdictDictionary?> dictionary)
     {
-        return new HttpClient(UtilsFun.httpClientDefaultHandler, disposeHandler: false)
-        {
-            Timeout = TimeSpan.FromSeconds(5)
-        };
+        this.dictionary = dictionary;
     }
+
     public List<ResultItem> QuerySuggest(string query)
     {
-
-        KeyValuePair<string, string>[] data = [new("kw", query)];
+        var dict = dictionary();
+        if (dict == null || !WordLookupTranslator.IsEnglishWord(query))
+            return new List<ResultItem>();
         try
         {
-            var res = client.PostAsync("https://fanyi.baidu.com/sug", data.ToFormContent())
-                                        .GetAwaiter()
-                                        .GetResult();
-            var sug = UtilsFun.ParseJson(res.Content.ReadAsStringAsync().GetAwaiter().GetResult(), Protocol.TranslatorJsonContext.Default.SuggestInterface);
-            if (sug == null || sug.data == null || sug.data.Length == 0)
-                return new List<ResultItem>();
-            var result = new List<ResultItem>();
-            foreach (var item in sug.data)
-            {
-                result.Add(new ResultItem
+            var key = EcdictDictionary.NormalizeKey(query);
+            return dict.Suggest(query, MaxSuggestions + 1)
+                .Where(e => !string.Equals(EcdictDictionary.NormalizeKey(e.Word), key, StringComparison.Ordinal))
+                .Take(MaxSuggestions)
+                .Select(e => new ResultItem
                 {
-                    Title = item.v,
-                    SubTitle = $"{item.k}",
-                    fromApiName = "Baidu",
-                    transType = "[Suggest]"
-
-                });
-
-            }
-            return result;
+                    Title = e.Summary,
+                    SubTitle = e.Word,
+                    fromApiName = WordLookupResult.EcdictApiName,
+                    transType = "[Suggest]",
+                })
+                .ToList();
         }
         catch (Exception err)
         {
-            return new List<ResultItem>{
-                    new ResultItem{
-                        Title = "some err happen in suggest",
-                        SubTitle = err.Message
-                    }
-                };
+            Log.Error($"Suggest failed: {err.Message}", typeof(SuggestHelper));
+            return new List<ResultItem>();
         }
     }
 }
