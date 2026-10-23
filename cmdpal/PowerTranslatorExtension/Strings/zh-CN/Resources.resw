@@ -75,6 +75,7 @@
   <data name="Status_Initializing_Subtitle" xml:space="preserve"><value>请稍后再试</value></data>
   <data name="Status_TranslateError_Title" xml:space="preserve"><value>翻译失败，请检查网络连接</value></data>
   <data name="Status_TranslateError_Subtitle" xml:space="preserve"><value>按回车键获取帮助</value></data>
+  <data name="Status_TranslateFailed_Title" xml:space="preserve"><value>翻译失败</value></data>
 
   <data name="Tag_SecondLanguage" xml:space="preserve"><value>[第二目标语言]</value></data>
   <data name="Tag_QueryRaw" xml:space="preserve"><value>[原始查询]</value></data>

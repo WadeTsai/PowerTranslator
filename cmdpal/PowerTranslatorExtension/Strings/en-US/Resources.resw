@@ -79,6 +79,7 @@
   <data name="Status_Initializing_Subtitle" xml:space="preserve"><value>please try later</value></data>
   <data name="Status_TranslateError_Title" xml:space="preserve"><value>result is null, some error happen in translate. check out your network!</value></data>
   <data name="Status_TranslateError_Subtitle" xml:space="preserve"><value>Press enter to get help</value></data>
+  <data name="Status_TranslateFailed_Title" xml:space="preserve"><value>Translation failed</value></data>
 
   <!-- Result row tags -->
   <data name="Tag_SecondLanguage" xml:space="preserve"><value>[second language]</value></data>

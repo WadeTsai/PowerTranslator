@@ -229,7 +229,8 @@ namespace Translator
                         Title = "Go to dictionary",
                         Action = context =>
                         {
-                            Helper.OpenInShell(string.Format(settingHelper.dictUtlPattern, selectedResult.Title));
+                            var word = selectedResult.ContextData as string ?? selectedResult.Title;
+                            Helper.OpenInShell(string.Format(settingHelper.dictUtlPattern, Uri.EscapeDataString(word)));
                             return false;
                         },
                         Glyph = "\xE721",

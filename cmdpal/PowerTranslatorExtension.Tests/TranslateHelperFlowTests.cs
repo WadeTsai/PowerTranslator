@@ -81,6 +81,71 @@ public class TranslateHelperFlowTests
         Assert.IsEmpty(translator.Calls);
     }
 
+    [TestMethod]
+    public void QueryTranslate_FallsBackToNextTranslatorWhenFirstThrows()
+    {
+        var primary = new FakeTranslator { Error = new TranslatorUnavailableException("rate-limited (HTTP 429)") };
+        var fallback = new FakeTranslator
+        {
+            Result = new FakeTranslateResult(new ResultItem { Title = "fallback", SubTitle = "source" }),
+        };
+        var helper = CreateHelper([primary, fallback], defaultLanguage: "en");
+
+        var results = helper.QueryTranslate("source");
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("fallback", results[0].Title);
+        Assert.HasCount(1, fallback.Calls);
+    }
+
+    [TestMethod]
+    public void QueryTranslate_ReusesCachedResultForSameTextAndTarget()
+    {
+        var translator = new FakeTranslator
+        {
+            Result = new FakeTranslateResult(new ResultItem { Title = "bonjour", SubTitle = "hello" }),
+        };
+        var helper = CreateHelper([translator], defaultLanguage: "en");
+
+        _ = helper.QueryTranslate("hello", toLanguage: "fr");
+        var results = helper.QueryTranslate("hello", toLanguage: "fr");
+        _ = helper.QueryTranslate("hello", toLanguage: "ja");
+
+        Assert.AreEqual("bonjour", results[0].Title);
+        Assert.HasCount(2, translator.Calls);
+        AssertCall(translator.Calls[1], "hello", "ja", "auto");
+    }
+
+    [TestMethod]
+    public void QueryTranslate_ExplicitTargetLanguageResolvesAlias()
+    {
+        var translator = new FakeTranslator
+        {
+            Result = new FakeTranslateResult(new ResultItem { Title = "你好", SubTitle = "hello" }),
+        };
+        var helper = CreateHelper([translator], defaultLanguage: "en");
+
+        _ = helper.QueryTranslate("hello", toLanguage: "zht");
+
+        AssertCall(translator.Calls[0], "hello", "zh-Hant", "auto");
+    }
+
+    [TestMethod]
+    [DataRow("serendipity", "セレンディピティ", "serendipity")]
+    [DataRow("你好", "hello", "hello")]
+    public void QueryTranslate_DictWordIsTheEnglishSide(string src, string translated, string expected)
+    {
+        var translator = new FakeTranslator
+        {
+            Result = new FakeTranslateResult(new ResultItem { Title = translated, SubTitle = src }),
+        };
+        var helper = CreateHelper([translator], defaultLanguage: "auto");
+
+        var results = helper.QueryTranslate(src, toLanguage: "ja");
+
+        Assert.AreEqual(expected, results[0].DictWord);
+    }
+
     private static TranslateHelper CreateHelper(
         IEnumerable<ITranslator> translators,
         string defaultLanguage,
@@ -107,6 +172,7 @@ public class TranslateHelperFlowTests
 
         public List<Call> Calls { get; } = [];
         public ITranslateResult? Result { get; init; }
+        public Exception? Error { get; init; }
         public bool Inited => true;
         public string Name => "Fake";
 
@@ -121,6 +187,8 @@ public class TranslateHelperFlowTests
         public ITranslateResult? Translate(string src, string toLan, string fromLan)
         {
             Calls.Add(new Call(src, toLan, fromLan));
+            if (Error != null)
+                throw Error;
             return Result;
         }
     }

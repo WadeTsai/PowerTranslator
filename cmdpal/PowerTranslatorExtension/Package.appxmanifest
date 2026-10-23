@@ -7,7 +7,7 @@
          IgnorableNamespaces="uap uap3 rescap">
     <Identity Name="NickXii.PowerTranslator"
               Publisher="CN=F48B8B01-03F2-4C65-AB37-1212875A0C8C"
-              Version="0.0.3.0" />
+              Version="0.0.4.0" />
     <Properties>
         <DisplayName>PowerTranslator</DisplayName>
         <PublisherDisplayName>NickXii</PublisherDisplayName>

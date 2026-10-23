@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -35,6 +36,9 @@ public class TranslateHelper
     // Translations share the read lock so the main and second-language queries run concurrently;
     // Reload takes the write lock so no request uses a client while it is being replaced.
     private readonly ReaderWriterLockSlim translateLock = new();
+    // Recent successful results, so typing the same text again does not send another request.
+    private const int maxCachedResults = 256;
+    private readonly ConcurrentDictionary<(string src, string toLan), ITranslateResult> resultCache = new();
     private Task<bool>? initTask;
     private long lastInitTime;
     private List<ITranslator> translators;
@@ -54,6 +58,8 @@ public class TranslateHelper
                 new Service.Dictionary.WordLookupTranslator(() => SettingsManager.Instance.EnableEnglishDefinitions),
                 // Sentences and everything the dictionaries cannot answer.
                 new Service.DeepL.DeepLTranslator(),
+                // Fallback when DeepL is rate-limited or unreachable.
+                new Service.Google.GoogleTranslator(),
             ],
             defaultLanguageKey,
             () => SettingsManager.Instance.EnableCodeMode)
@@ -100,12 +106,17 @@ public class TranslateHelper
             toLan = cultureAliasHelper.GetCultureFromAlias(_toLan)
         };
     }
-    private ITranslateResult? Translate(string text, string toLan)
+    /// <summary>Tries each translator in order; failure reasons are collected into <paramref name="errors"/>.</summary>
+    private ITranslateResult? Translate(string text, string toLan, List<string> errors)
     {
+        if (resultCache.TryGetValue((text, toLan), out var cached))
+            return cached;
+
+        ITranslateResult? result;
         translateLock.EnterReadLock();
         try
         {
-            return translators.FirstNotNoneCast((it) =>
+            result = translators.FirstNotNoneCast((it) =>
             {
                 try
                 {
@@ -114,6 +125,7 @@ public class TranslateHelper
                 catch (Exception err)
                 {
                     UtilsFun.LogMessage($"{it.Name}: {err.Message}");
+                    errors.Add($"{it.Name}: {err.Message}");
                     return null;
                 }
             });
@@ -122,6 +134,14 @@ public class TranslateHelper
         {
             translateLock.ExitReadLock();
         }
+
+        if (result != null)
+        {
+            if (resultCache.Count >= maxCachedResults)
+                resultCache.Clear();
+            resultCache[(text, toLan)] = result;
+        }
+        return result;
     }
     public List<ResultItem> QueryTranslate(string raw, string? toLanguage = null)
     {
@@ -147,21 +167,28 @@ public class TranslateHelper
 
         var target = ParseRawSrc(raw);
         string src = target.src;
-        string toLan = toLanguage ?? target.toLan;
-        ITranslateResult? translateResult = Translate(src, toLan);
+        string toLan = toLanguage != null ? cultureAliasHelper.GetCultureFromAlias(toLanguage) : target.toLan;
+        var errors = new List<string>();
+        ITranslateResult? translateResult = Translate(src, toLan, errors);
 
         if (translateResult != null)
         {
             var tres = translateResult!.Transform();
             if (tres != null)
-                res.AddRange(tres);
+            {
+                foreach (var item in tres)
+                {
+                    item.DictWord ??= DictionaryWord(src, item.Title);
+                    res.Add(item);
+                }
+            }
         }
         else
         {
             res.Add(new ResultItem
             {
-                Title = Loc.Get("Status_TranslateError_Title"),
-                SubTitle = Loc.Get("Status_TranslateError_Subtitle"),
+                Title = errors.Count > 0 ? Loc.Get("Status_TranslateFailed_Title") : Loc.Get("Status_TranslateError_Title"),
+                SubTitle = errors.Count > 0 ? string.Join(" · ", errors) : Loc.Get("Status_TranslateError_Subtitle"),
                 Action = () =>
                 {
                     UtilsFun.SetClipboardText("https://github.com/N0I0C0K/PowerTranslator/issues?q=");
@@ -218,6 +245,7 @@ public class TranslateHelper
 
     public void Reload()
     {
+        resultCache.Clear();
         Task.Factory.StartNew(() =>
         {
             translateLock.EnterWriteLock();
@@ -241,6 +269,13 @@ public class TranslateHelper
             }
         });
     }
+
+    /// <summary>
+    /// Cambridge and Oxford are English dictionaries, so jump with the English side of the translation:
+    /// the typed word, or the translation when the input is Chinese / Japanese / Korean.
+    /// </summary>
+    public static string DictionaryWord(string src, string translated) =>
+        Service.DeepL.DeepLTranslator.ContainsCjk(src) ? translated : src;
 
     /// <summary>Reads the text aloud with the built-in Windows speech synthesizer.</summary>
     public void Read(string? txt)

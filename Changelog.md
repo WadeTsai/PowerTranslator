@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-23
+
+### Added
+- DeepL 被限流或無法連線時改用 Google 翻譯備援；DeepL 回傳 429 後暫停 60 秒，期間直接使用 Google
+- 快取最近的翻譯結果，重複查詢不再發送請求
+- 所有翻譯服務都失敗時顯示實際原因（例如 `DeepL: rate-limited (HTTP 429)`）
+- 目標語言為 `en`（例如第二目標語言）時，英文單字顯示英英釋義；線上字典查不到時改用 ECDICT 內建的離線英英釋義（WordNet）
+
+### Fixed
+- 第二目標語言常顯示「No translation returned」（DeepL 免費端點限流）
+- 「跳至辭典」改為帶入英文單字（輸入的英文，或中日韓輸入的翻譯結果），不再帶入翻譯後的文字
+- 第二目標語言未套用 `zht` / `zhs` 等語言代碼簡寫
+- `cmdpal/build-store.ps1` 適配新版 MSIX 工具鏈的輸出路徑
+
 ### Changed
 - 英文單字/片語改用離線 [ECDICT](https://github.com/skywind3000/ECDICT) 查詢繁體中文釋義（建置時以 OpenCC `s2twp` 轉換，隨安裝檔附帶）
 - 新增 [Free Dictionary API](https://dictionaryapi.dev) 英英釋義（設定 `Show English definitions`，預設開啟）

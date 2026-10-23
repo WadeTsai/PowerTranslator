@@ -348,6 +348,10 @@ public class SplitTextReqParams
 public class DeepLTranslator : ITranslator
 {
     private HttpClient client;
+    // The free web endpoint throttles aggressively; after a 429 skip DeepL for a while
+    // instead of hitting the limit again on every keystroke.
+    private static readonly TimeSpan rateLimitCooldown = TimeSpan.FromSeconds(60);
+    private long blockedUntil;
     private const string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0";
     private const string apiEndPoint = "https://www2.deepl.com/jsonrpc?client=chrome-extension,1.33.0";
     public DeepLTranslator()
@@ -411,6 +415,10 @@ public class DeepLTranslator : ITranslator
 
     public override DeepLTranslateResult? Translate(string src, string toLan, string? fromLan)
     {
+        var remaining = Interlocked.Read(ref blockedUntil) - UtilsFun.GetUtcTimeNow();
+        if (remaining > 0)
+            throw new TranslatorUnavailableException($"rate-limited, retrying in {(remaining + 999) / 1000}s");
+
         var (targetLang, variant) = ResolveTarget(src, toLan);
         if (fromLan == "auto")
             fromLan = null;
@@ -420,9 +428,18 @@ public class DeepLTranslator : ITranslator
                                             .GetAwaiter()
                                             .GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            Interlocked.Exchange(ref blockedUntil, UtilsFun.GetUtcTimeNow() + (long)rateLimitCooldown.TotalMilliseconds);
+            throw new TranslatorUnavailableException("rate-limited (HTTP 429)");
+        }
         var res = UtilsFun.ParseJson(content, TranslatorJsonContext.Default.DeepLTranslateResult);
         if (res == null || !res.IsSuccess())
+        {
+            if (!response.IsSuccessStatusCode)
+                throw new TranslatorUnavailableException($"HTTP {(int)response.StatusCode}");
             return null;
+        }
         if (variant == "zh-Hant")
             res.ConvertToTraditional();
         return res;
@@ -433,5 +450,6 @@ public class DeepLTranslator : ITranslator
         var old = client;
         client = BuildClient();
         old.Dispose();
+        Interlocked.Exchange(ref blockedUntil, 0);
     }
 }

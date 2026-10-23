@@ -8,12 +8,14 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Translator.Service.Ecdict;
 
-/// <summary>One ECDICT record (English headword with Traditional Chinese translations).</summary>
+/// <summary>One ECDICT record (English headword with Traditional Chinese translations and English definitions).</summary>
 public sealed class EcdictEntry
 {
     public string Word { get; init; } = string.Empty;
     public string Phonetic { get; init; } = string.Empty;
     public IReadOnlyList<string> Translations { get; init; } = [];
+    /// <summary>English (WordNet) definitions such as <c>n. an expression of greeting</c>; empty for older data files.</summary>
+    public IReadOnlyList<string> Definitions { get; init; } = [];
     /// <summary>Raw ECDICT exchange field, e.g. <c>p:went/d:gone/i:going/3:goes</c> or <c>0:go/1:p</c>.</summary>
     public string Exchange { get; init; } = string.Empty;
     public string Tag { get; init; } = string.Empty;
@@ -223,8 +225,8 @@ public sealed partial class EcdictDictionary : IDisposable
     private string[] ReadFields(int index)
     {
         var fields = Encoding.UTF8.GetString(ReadRecord(index)).Split(FieldSeparator);
-        if (fields.Length < 7)
-            Array.Resize(ref fields, 7);
+        if (fields.Length < 8)
+            Array.Resize(ref fields, 8);
         for (var i = 0; i < fields.Length; i++)
             fields[i] ??= string.Empty;
         return fields;
@@ -241,6 +243,8 @@ public sealed partial class EcdictDictionary : IDisposable
             Exchange = fields[4],
             Tag = fields[5],
             Frequency = int.TryParse(fields[6], out var frq) ? frq : 0,
+            Definitions = fields[7]
+                .Split("\\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
         };
     }
 

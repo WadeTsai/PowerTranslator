@@ -75,6 +75,7 @@
   <data name="Status_Initializing_Subtitle" xml:space="preserve"><value>請稍候再試</value></data>
   <data name="Status_TranslateError_Title" xml:space="preserve"><value>翻譯失敗，請檢查網路連線</value></data>
   <data name="Status_TranslateError_Subtitle" xml:space="preserve"><value>按 Enter 取得協助</value></data>
+  <data name="Status_TranslateFailed_Title" xml:space="preserve"><value>翻譯失敗</value></data>
 
   <data name="Tag_SecondLanguage" xml:space="preserve"><value>[第二目標語言]</value></data>
   <data name="Tag_QueryRaw" xml:space="preserve"><value>[原始查詢]</value></data>

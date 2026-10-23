@@ -138,9 +138,10 @@ namespace PowerTranslatorExtension.Utils
                         Result = CommandResult.KeepOpen(),
                     }));
                 }
-                if (enableJumpDict && !string.IsNullOrEmpty(item.Title))
+                var dictWord = item.DictWord ?? item.Title;
+                if (enableJumpDict && !string.IsNullOrEmpty(dictWord))
                 {
-                    var url = string.Format(System.Globalization.CultureInfo.InvariantCulture, dictPattern, Uri.EscapeDataString(item.Title));
+                    var url = string.Format(System.Globalization.CultureInfo.InvariantCulture, dictPattern, Uri.EscapeDataString(dictWord));
                     contextItems.Add(new CommandContextItem(new OpenUrlCommand(url)
                     {
                         Name = Loc.Get("Context_JumpToDictionary"),

@@ -170,13 +170,13 @@ foreach ($plat in $Platforms) {
     }
 
     # 找出這次 build 產出的 msix：bin\<plat> 下、不在 Dependencies 子目錄、
-    # 不是 .msixsym/.msixbundle，取最新寫入的那個
+    # 檔名帶本次版本與架構，取最新寫入的那個。
+    # 新版 MSIX 工具鏈把 msix 放在 bin\<plat>\<cfg>\<tfm>\<rid>\，不再有 AppPackages 子目錄。
     $platBin = Join-Path $projectDir "bin\$plat"
-    $msix = Get-ChildItem $platBin -Recurse -Filter '*.msix' -ErrorAction SilentlyContinue |
+    $msix = Get-ChildItem $platBin -Recurse -Filter "*_${version}_$plat.msix" -ErrorAction SilentlyContinue |
         Where-Object {
             $_.Extension -eq '.msix' -and
-            $_.FullName -notmatch '\\Dependencies\\' -and
-            $_.Directory.FullName -match '\\AppPackages\\'
+            $_.FullName -notmatch '\\Dependencies\\'
         } |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1

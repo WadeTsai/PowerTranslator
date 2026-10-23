@@ -24,6 +24,8 @@ public sealed class WordLookupResult : ITranslateResult
     /// <summary>The ECDICT entry of the base form when the query is an inflection (went -> go).</summary>
     public EcdictEntry? LemmaEntry { get; init; }
     public EnglishDefinition? English { get; init; }
+    /// <summary>English target: show English definitions only (Free Dictionary, else ECDICT's offline ones).</summary>
+    public bool EnglishOnly { get; init; }
 
     private static readonly Dictionary<char, string> inflectionNames = new()
     {
@@ -52,10 +54,55 @@ public sealed class WordLookupResult : ITranslateResult
         return picked.Concat(rest).Take(MaxEnglishSenses).OrderBy(x => x.idx).Select(x => x.sense);
     }
 
+    // ECDICT definitions start with a WordNet part-of-speech tag: n. / v / a. / s. (satellite adjective) / r. (adverb).
+    private static readonly Dictionary<string, string> wordNetPartsOfSpeech = new()
+    {
+        ["n"] = "noun",
+        ["v"] = "verb",
+        ["a"] = "adjective",
+        ["s"] = "adjective",
+        ["r"] = "adverb",
+        ["adj"] = "adjective",
+        ["adv"] = "adverb",
+    };
+
+    /// <summary>Splits "n. an expression of greeting" into ("noun", "an expression of greeting").</summary>
+    public static (string PartOfSpeech, string Definition) ParseEcdictDefinition(string line)
+    {
+        var space = line.IndexOf(' ');
+        if (space > 0 && wordNetPartsOfSpeech.TryGetValue(line[..space].TrimEnd('.'), out var pos))
+            return (pos, line[(space + 1)..].Trim());
+        return (string.Empty, line);
+    }
+
+    /// <summary>ECDICT's offline English definitions, used when the online dictionary has no answer.</summary>
+    private IEnumerable<ResultItem> TransformEcdictDefinitions()
+    {
+        var main = Entries.Count > 0 ? Entries[0] : null;
+        var source = main is { Definitions.Count: > 0 } ? main : LemmaEntry is { Definitions.Count: > 0 } ? LemmaEntry : null;
+        if (source == null)
+            yield break;
+        var phonetic = source.Phonetic.Length > 0 ? $" /{source.Phonetic}/" : string.Empty;
+        var head = source == main ? $"{source.Word}{phonetic}" : $"{main!.Word} → {source.Word}{phonetic}";
+        foreach (var line in source.Definitions.Take(MaxEnglishSenses))
+        {
+            var (pos, definition) = ParseEcdictDefinition(line);
+            yield return new ResultItem
+            {
+                Title = definition,
+                SubTitle = pos.Length > 0 ? $"[{pos}] {head} · {EcdictApiName}" : $"{head} · {EcdictApiName}",
+                CopyTgt = definition,
+                fromApiName = EcdictApiName,
+            };
+        }
+    }
+
     public override IEnumerable<ResultItem>? Transform()
     {
         var res = new List<ResultItem>();
-        var main = Entries.Count > 0 ? Entries[0] : null;
+        var main = !EnglishOnly && Entries.Count > 0 ? Entries[0] : null;
+        if (EnglishOnly && English == null)
+            res.AddRange(TransformEcdictDefinitions());
         if (main != null)
         {
             var phonetic = English?.Phonetic ?? (main.Phonetic.Length > 0 ? main.Phonetic : null);
@@ -193,7 +240,8 @@ public sealed partial class WordLookupTranslator : ITranslator, IDisposable
 
         IReadOnlyList<EcdictEntry> entries = [];
         EcdictEntry? lemmaEntry = null;
-        var dict = wantChinese ? dictionary() : null;
+        // English target: ECDICT still supplies the base form and offline definitions.
+        var dict = dictionary();
         if (dict != null)
         {
             entries = dict.Lookup(word);
@@ -219,15 +267,16 @@ public sealed partial class WordLookupTranslator : ITranslator, IDisposable
             }
         }
 
-        if (entries.Count == 0 && english == null)
-            return null;
-        return new WordLookupResult
+        var result = new WordLookupResult
         {
             Query = word,
             Entries = entries,
             LemmaEntry = lemmaEntry,
             English = english,
+            EnglishOnly = !wantChinese,
         };
+        // Nothing to show: let the sentence translators take over.
+        return result.Transform() == null ? null : result;
     }
 
     private async Task<EnglishDefinition?> SafeLookup(string word, CancellationToken cancellationToken)

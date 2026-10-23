@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Linq;
 using Wox.Plugin;
 using Wox.Plugin.Logger;
@@ -29,6 +30,9 @@ public class TranslateHelper
     private List<(string name, Func<ITranslator> create)> translatorGenerators;
     private bool isSpeaking = false;
     private bool isIniting = false;
+    // Recent successful results, so typing the same text again does not send another request.
+    private const int maxCachedResults = 256;
+    private readonly ConcurrentDictionary<(string src, string toLan), ITranslateResult> resultCache = new();
     public string defaultLanguageKey = "auto";
     private Middleware.Alias.CultureAliasHelper cultureAliasHelper = new(
         new Dictionary<string, string>{
@@ -43,6 +47,8 @@ public class TranslateHelper
             ("ECDICT", () => new Service.Dictionary.WordLookupTranslator(() => SettingHelper.Instance.enableEnglishDefinitions)),
             // Sentences and everything the dictionaries cannot answer.
             ("DeepL", () => new Service.DeepL.DeepLTranslator()),
+            // Fallback when DeepL is rate-limited or unreachable.
+            ("Google", () => new Service.Google.GoogleTranslator()),
         };
         this.translators = translatorGenerators.Select(_ => (ITranslator?)null).ToList();
         // make sure do it before init translator
@@ -80,9 +86,13 @@ public class TranslateHelper
             toLan = cultureAliasHelper.GetCultureFromAlias(_toLan)
         };
     }
-    private ITranslateResult? Translate(string text, string toLan)
+    /// <summary>Tries each translator in order; failure reasons are collected into <paramref name="errors"/>.</summary>
+    private ITranslateResult? Translate(string text, string toLan, List<string> errors)
     {
-        return translators.Enumerate().FirstNotNoneCast((data) =>
+        if (resultCache.TryGetValue((text, toLan), out var cached))
+            return cached;
+
+        var result = translators.Enumerate().FirstNotNoneCast((data) =>
         {
             var (idx, it) = data;
             try
@@ -97,9 +107,18 @@ public class TranslateHelper
             catch (Exception err)
             {
                 Log.Error(err.Message, typeof(TranslateHelper));
+                errors.Add($"{this.translatorGenerators[idx].name}: {err.Message}");
                 return null;
             }
         });
+
+        if (result != null)
+        {
+            if (resultCache.Count >= maxCachedResults)
+                resultCache.Clear();
+            resultCache[(text, toLan)] = result;
+        }
+        return result;
     }
     public List<ResultItem> QueryTranslate(string raw, string translateFrom = "user input", string? toLanguage = null)
     {
@@ -127,12 +146,15 @@ public class TranslateHelper
 
         var target = ParseRawSrc(raw);
         string src = target.src;
-        string toLan = toLanguage ?? target.toLan;
-        ITranslateResult? translateResult = Translate(src, toLan);
+        string toLan = toLanguage != null ? cultureAliasHelper.GetCultureFromAlias(toLanguage) : target.toLan;
+        var errors = new List<string>();
+        ITranslateResult? translateResult = Translate(src, toLan, errors);
         var transformedResults = translateResult?.Transform()?.ToList();
 
         if (transformedResults is { Count: > 0 })
         {
+            foreach (var item in transformedResults)
+                item.DictWord ??= DictionaryWord(src, item.Title);
             res.AddRange(transformedResults);
         }
         else
@@ -141,12 +163,16 @@ public class TranslateHelper
 
             res.Add(new ResultItem
             {
-                Title = hasExplicitTargetLanguage
-                    ? "No translation returned"
-                    : "Translation failed. Check your network connection.",
-                SubTitle = hasExplicitTargetLanguage
-                    ? "The input may already be in the target language, or the translation service may be unavailable."
-                    : "Press Enter to get help",
+                Title = errors.Count > 0
+                    ? "Translation failed"
+                    : hasExplicitTargetLanguage
+                        ? "No translation returned"
+                        : "Translation failed. Check your network connection.",
+                SubTitle = errors.Count > 0
+                    ? string.Join(" · ", errors)
+                    : hasExplicitTargetLanguage
+                        ? "The input may already be in the target language, or the translation service may be unavailable."
+                        : "Press Enter to get help",
                 Action = (ev) =>
                 {
                     UtilsFun.SetClipboardText("https://github.com/N0I0C0K/PowerTranslator/issues?q=");
@@ -158,6 +184,13 @@ public class TranslateHelper
 
         return res;
     }
+
+    /// <summary>
+    /// Cambridge and Oxford are English dictionaries, so jump with the English side of the translation:
+    /// the typed word, or the translation when the input is Chinese / Japanese / Korean.
+    /// </summary>
+    public static string DictionaryWord(string src, string translated) =>
+        Service.DeepL.DeepLTranslator.ContainsCjk(src) ? translated : src;
 
     /// <summary>Reads the text aloud with the built-in Windows speech engine (SAPI).</summary>
     public void Read(string? txt)
@@ -254,6 +287,7 @@ public class TranslateHelper
 
     public void Reload()
     {
+        resultCache.Clear();
         foreach (var translator in translators)
         {
             Task.Factory.StartNew(() =>

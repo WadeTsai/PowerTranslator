@@ -37,7 +37,7 @@
 
 專案根目錄的 [justfile](./justfile) 統一了開發、測試和打包命令。執行 `just` 或 `just help` 可檢視完整列表。
 
-ECDICT 資料檔 `data/ecdict.bin`（約 57MB，不納入 git）由 `tools/ecdict/build_ecdict.py` 產生：它會下載固定版本的 ECDICT，再用 OpenCC 轉成繁體。建置時若找不到資料檔會自動嘗試產生，也可以手動執行：
+ECDICT 資料檔 `data/ecdict.bin`（約 72MB，不納入 git）由 `tools/ecdict/build_ecdict.py` 產生：它會下載固定版本的 ECDICT，再用 OpenCC 轉成繁體。建置時若找不到資料檔會自動嘗試產生，也可以手動執行：
 
 ```powershell
 pip install opencc
@@ -169,7 +169,7 @@ ptr add Translator N0I0C0K/PowerTranslator
 - 切換預設目標翻譯語言，預設是`auto`
   ![languages](Images/languages.png)
 - 目標語言為 `zht` 或 `auto` 時，英文單字與短語（最多 4 個單字）會先查離線 ECDICT 字典；查無結果才改用 DeepL。
-- `Show English definitions`（預設開啟）：同時向 [Free Dictionary API](https://dictionaryapi.dev) 查詢英英釋義；目標語言為 `en` 時只顯示英英釋義。
+- `Show English definitions`（預設開啟）：同時向 [Free Dictionary API](https://dictionaryapi.dev) 查詢英英釋義；目標語言為 `en` 時（例如設為第二目標語言）只顯示英英釋義；線上字典查不到時改用 ECDICT 內建的離線英英釋義（WordNet），即使關閉此選項也會使用。
 
 ## Issue
 

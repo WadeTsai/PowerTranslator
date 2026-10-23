@@ -18,5 +18,7 @@ namespace Translator
         public string? transType { get; set; }
         public string? fromApiName { get; set; }
         public string? Description { get; set; }
+        /// <summary>English word to open in the online dictionary (the source word, or the translation of CJK input).</summary>
+        public string? DictWord { get; set; }
     }
 }

@@ -13,11 +13,14 @@ File layout (little endian)::
     count   uint32   number of records
     offsets uint32 * (count + 1), relative to the start of the record blob
     records UTF-8, fields separated by 0x1F:
-            key, word, phonetic, translation, exchange, tag, frq
+            key, word, phonetic, translation, exchange, tag, frq, definition
+
+``definition`` holds ECDICT's English (WordNet) definitions; readers treat a missing trailing
+field as empty, so files built before it was added keep working.
 
 ``key`` is the word with ASCII letters lower-cased; records are sorted by the UTF-8 bytes
 of the key (then by word) so lookups can binary-search with an ordinal byte comparison.
-Translation lines are separated by "\\n".
+Translation and definition lines are separated by "\\n".
 
 Usage::
 
@@ -86,6 +89,7 @@ def build(csv_path: str, out_path: str) -> None:
                 clean(row.get("exchange") or ""),
                 clean(row.get("tag") or ""),
                 rank if rank.isdigit() else "0",
+                clean(row.get("definition") or ""),
             ]
             records.append((key.encode("utf-8"), word.encode("utf-8"), SEP.join(fields).encode("utf-8")))
 

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using PowerTranslatorExtension.Protocol;
 using PowerTranslatorExtension.Utils;
 
@@ -214,6 +216,10 @@ public class DeepLTranslator : ITranslator, IDisposable
     private HttpClient client;
     private const string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0";
     private const string apiEndPoint = "https://www2.deepl.com/jsonrpc?client=chrome-extension,1.33.0";
+    // The free web endpoint throttles aggressively; after a 429 skip DeepL for a while
+    // instead of hitting the limit again on every keystroke.
+    private static readonly TimeSpan rateLimitCooldown = TimeSpan.FromSeconds(60);
+    private long blockedUntil;
     private bool inited;
 
     public bool Inited => inited;
@@ -246,6 +252,7 @@ public class DeepLTranslator : ITranslator, IDisposable
     {
         client.Dispose();
         client = BuildClient();
+        Interlocked.Exchange(ref blockedUntil, 0);
     }
 
     /// <summary>
@@ -279,6 +286,10 @@ public class DeepLTranslator : ITranslator, IDisposable
 
     public ITranslateResult? Translate(string src, string toLan, string fromLan)
     {
+        var remaining = Interlocked.Read(ref blockedUntil) - UtilsFun.GetUtcTimeNow();
+        if (remaining > 0)
+            throw new TranslatorUnavailableException($"rate-limited, retrying in {(remaining + 999) / 1000}s");
+
         var (targetLang, variant) = ResolveTarget(src, toLan);
         string? from = string.Equals(fromLan, "auto", StringComparison.OrdinalIgnoreCase) ? null : fromLan;
         var body = new DeepLTranslateRequestBody(new Params(targetLang, from, src, variant));
@@ -286,9 +297,18 @@ public class DeepLTranslator : ITranslator, IDisposable
         var response = client.PostAsync(apiEndPoint, new StringContent(bodyStr, Encoding.UTF8, "application/json"))
             .GetAwaiter().GetResult();
         var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            Interlocked.Exchange(ref blockedUntil, UtilsFun.GetUtcTimeNow() + (long)rateLimitCooldown.TotalMilliseconds);
+            throw new TranslatorUnavailableException("rate-limited (HTTP 429)");
+        }
         var res = UtilsFun.ParseJson(content, TranslatorJsonContext.Default.DeepLTranslateResult);
         if (res == null || !res.IsSuccess())
+        {
+            if (!response.IsSuccessStatusCode)
+                throw new TranslatorUnavailableException($"HTTP {(int)response.StatusCode}");
             return null;
+        }
         if (variant == "zh-Hant")
             res.ConvertToTraditional();
         return res;

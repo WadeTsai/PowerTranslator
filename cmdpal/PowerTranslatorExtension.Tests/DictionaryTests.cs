@@ -11,14 +11,14 @@ namespace PowerTranslatorExtension.Tests;
 /// <summary>Writes a small file in the same format as tools/ecdict/build_ecdict.py.</summary>
 internal static class EcdictFixture
 {
-    // word, phonetic, translation (lines joined by "\n"), exchange, tag, frq
+    // word, phonetic, translation (lines joined by "\n"), exchange, tag, frq[, definition]
     private static readonly string[][] Rows =
     [
-        ["apple", "'æpl", "n. 蘋果, 傢伙\\n[醫] 蘋果", "s:apples", "zk gk", "2695"],
+        ["apple", "'æpl", "n. 蘋果, 傢伙\\n[醫] 蘋果", "s:apples", "zk gk", "2695", "n. fruit with red or yellow or green skin\\nn. native Eurasian tree"],
         ["application", ".æpli'keiʃәn", "n. 應用, 申請", "s:applications", "cet4", "700"],
         ["apply", "ә'plai", "v. 申請, 應用", "p:applied/d:applied/3:applies/i:applying", "zk", "500"],
         ["appeal", "ә'pi:l", "n. 呼籲, 上訴", "", "", "1200"],
-        ["go", "gәu", "v. 去, 走", "p:went/d:gone/i:going/3:goes", "zk", "50"],
+        ["go", "gәu", "v. 去, 走", "p:went/d:gone/i:going/3:goes", "zk", "50", "v change location; move, travel, or proceed"],
         ["went", "went", "go的過去式", "0:go/1:p", "", "0"],
         ["US", "", "[經] 美國", "", "", "0"],
         ["us", "ʌs", "pron. 我們", "", "zk", "113"],
@@ -277,6 +277,55 @@ public class WordLookupTranslatorTests
 
         Assert.HasCount(1, items);
         Assert.AreEqual("[noun] apple /ˈæp.əl/ · Free Dictionary API", items[0].SubTitle);
+    }
+
+    [TestMethod]
+    public void Translate_EnglishTargetFallsBackToEcdictDefinitions()
+    {
+        var items = Create(w => null).Translate("apple", "en", "auto")!.Transform()!.ToList();
+
+        Assert.HasCount(2, items);
+        Assert.AreEqual("fruit with red or yellow or green skin", items[0].Title);
+        Assert.AreEqual("[noun] apple /'æpl/ · ECDICT", items[0].SubTitle);
+        Assert.AreEqual("native Eurasian tree", items[1].Title);
+        Assert.IsTrue(items.All(i => i.fromApiName == "ECDICT"));
+    }
+
+    [TestMethod]
+    public void Translate_EnglishTargetWorksWithEnglishDefinitionsDisabled()
+    {
+        var items = Create(english: null).Translate("apple", "en", "auto")!.Transform()!.ToList();
+
+        Assert.AreEqual("fruit with red or yellow or green skin", items[0].Title);
+    }
+
+    [TestMethod]
+    public void Translate_EnglishTargetUsesLemmaDefinitionsForInflections()
+    {
+        var items = Create(w => null).Translate("went", "en", "auto")!.Transform()!.ToList();
+
+        Assert.HasCount(1, items);
+        Assert.AreEqual("change location; move, travel, or proceed", items[0].Title);
+        Assert.AreEqual("[verb] went → go /gәu/ · ECDICT", items[0].SubTitle);
+    }
+
+    [TestMethod]
+    public void Translate_EnglishTargetReturnsNullWithoutAnyDefinition()
+    {
+        Assert.IsNull(Create(w => null).Translate("appeal", "en", "auto"));
+    }
+
+    [TestMethod]
+    [DataRow("n. an expression of greeting", "noun", "an expression of greeting")]
+    [DataRow("v change location", "verb", "change location")]
+    [DataRow("a. delighting the senses", "adjective", "delighting the senses")]
+    [DataRow("s. (of weather) highly enjoyable", "adjective", "(of weather) highly enjoyable")]
+    [DataRow("r. quickly", "adverb", "quickly")]
+    [DataRow("adv. quickly", "adverb", "quickly")]
+    [DataRow("plural of apple", "", "plural of apple")]
+    public void ParseEcdictDefinition_SplitsWordNetPartOfSpeech(string line, string pos, string definition)
+    {
+        Assert.AreEqual((pos, definition), WordLookupResult.ParseEcdictDefinition(line));
     }
 
     [TestMethod]
