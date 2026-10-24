@@ -271,6 +271,17 @@ public class WordLookupTranslatorTests
     }
 
     [TestMethod]
+    public void Translate_ReadsTheEnglishWordNotTheChinese()
+    {
+        var apple = Create(w => string.Equals(w, "apple", StringComparison.OrdinalIgnoreCase) ? AppleDefinition : null).Translate("Apple", "auto", "auto")!.Transform()!.ToList();
+        Assert.IsTrue(apple.All(i => i.ReadText == "apple"));
+
+        var went = Create(w => null).Translate("went", "auto", "auto")!.Transform()!.ToList();
+        Assert.AreEqual("went", went[0].ReadText);
+        Assert.AreEqual("go", went[1].ReadText);
+    }
+
+    [TestMethod]
     public void Translate_EnglishTargetSkipsChinese()
     {
         var items = Create(w => AppleDefinition).Translate("apple", "en", "auto")!.Transform()!.ToList();

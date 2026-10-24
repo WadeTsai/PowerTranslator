@@ -125,7 +125,8 @@ namespace Translator
 
             if (settingHelper.enableAutoRead)
             {
-                this.translateHelper?.Read(res.FirstOrDefault()?.Title);
+                var firstRes = res.FirstOrDefault();
+                this.translateHelper?.Read(firstRes?.ReadText ?? firstRes?.Title);
             }
 
             //add the result to this history
@@ -210,7 +211,7 @@ namespace Translator
                 {
                     Title = "Read (Ctrl+Enter)",
                     Action = context=>{
-                        this.translateHelper?.Read(selectedResult.Title);
+                        this.translateHelper?.Read((selectedResult.ContextData as ResultItem)?.ReadText ?? selectedResult.Title);
                         return false;
                     },
                     Glyph = "\xEDB5",
@@ -229,7 +230,7 @@ namespace Translator
                         Title = "Go to dictionary",
                         Action = context =>
                         {
-                            var word = selectedResult.ContextData as string ?? selectedResult.Title;
+                            var word = (selectedResult.ContextData as ResultItem)?.DictWord ?? selectedResult.Title;
                             Helper.OpenInShell(string.Format(settingHelper.dictUtlPattern, Uri.EscapeDataString(word)));
                             return false;
                         },

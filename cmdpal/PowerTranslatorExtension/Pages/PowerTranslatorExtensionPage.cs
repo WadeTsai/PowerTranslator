@@ -152,7 +152,7 @@ internal sealed partial class PowerTranslatorExtensionPage : DynamicListPage, ID
         }
 
         var firstWithApi = res.FirstOrDefault(r => r.fromApiName != null);
-        var autoReadText = settings.EnableAutoRead && res.Count > 0 ? res[0].Title : null;
+        var autoReadText = settings.EnableAutoRead && res.Count > 0 ? res[0].ReadText ?? res[0].Title : null;
         if (autoReadText != null || firstWithApi != null)
         {
             onPublished = () =>

@@ -132,7 +132,7 @@ namespace PowerTranslatorExtension.Utils
                 }
                 if (translateHelper != null && !string.IsNullOrEmpty(item.Title))
                 {
-                    contextItems.Add(new CommandContextItem(new AnonymousCommand(() => translateHelper.Read(item.Title))
+                    contextItems.Add(new CommandContextItem(new AnonymousCommand(() => translateHelper.Read(item.ReadText ?? item.Title))
                     {
                         Name = Loc.Get("Context_ReadAloud"),
                         Result = CommandResult.KeepOpen(),

@@ -93,6 +93,7 @@ public sealed class WordLookupResult : ITranslateResult
                 SubTitle = pos.Length > 0 ? $"[{pos}] {head} · {EcdictApiName}" : $"{head} · {EcdictApiName}",
                 CopyTgt = definition,
                 fromApiName = EcdictApiName,
+                ReadText = source.Word,
             };
         }
     }
@@ -113,6 +114,7 @@ public sealed class WordLookupResult : ITranslateResult
                 SubTitle = $"{head} · {EcdictApiName}",
                 CopyTgt = main.Summary,
                 fromApiName = EcdictApiName,
+                ReadText = main.Word,
             });
             if (main.Translations.Count > 1)
             {
@@ -121,6 +123,7 @@ public sealed class WordLookupResult : ITranslateResult
                     Title = t,
                     SubTitle = main.Word,
                     fromApiName = EcdictApiName,
+                    ReadText = main.Word,
                 }));
             }
             if (LemmaEntry != null)
@@ -133,6 +136,7 @@ public sealed class WordLookupResult : ITranslateResult
                         ? $"{main.Word} → {LemmaEntry.Word}（{forms}）· {EcdictApiName}"
                         : $"{main.Word} → {LemmaEntry.Word} · {EcdictApiName}",
                     fromApiName = EcdictApiName,
+                    ReadText = LemmaEntry.Word,
                 });
             }
             foreach (var other in Entries.Skip(1).Take(2))
@@ -142,6 +146,7 @@ public sealed class WordLookupResult : ITranslateResult
                     Title = other.Summary,
                     SubTitle = $"{other.Word} · {EcdictApiName}",
                     fromApiName = EcdictApiName,
+                    ReadText = other.Word,
                 });
             }
         }
@@ -159,6 +164,7 @@ public sealed class WordLookupResult : ITranslateResult
                     SubTitle = $"{pos}{word} · {FreeDictionaryApiName}",
                     Description = sense.Example,
                     fromApiName = FreeDictionaryApiName,
+                    ReadText = English.Word,
                 });
                 first = false;
             }

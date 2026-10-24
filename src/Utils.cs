@@ -138,7 +138,7 @@ namespace Translator.Utils
                         return true;
                     }),
                     IcoPath = item.iconPath ?? iconPath,
-                    ContextData = item.DictWord,
+                    ContextData = item,
                     ToolTipData = new Wox.Plugin.ToolTipData(item.Title, $"{item.Description ?? item.SubTitle}\n\n{item.transType}-{item.fromApiName}")
                 };
             }).ToList();

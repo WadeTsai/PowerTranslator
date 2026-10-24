@@ -17,6 +17,8 @@ public class ResultItem
     public string? Description { get; set; }
     /// <summary>English word to open in the online dictionary (the source word, or the translation of CJK input).</summary>
     public string? DictWord { get; set; }
+    /// <summary>Text for "Read aloud" when it differs from the title (dictionary results read the English word, not the Chinese).</summary>
+    public string? ReadText { get; set; }
 }
 
 public interface ITranslateResult
