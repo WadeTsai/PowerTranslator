@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 第二目標語言常顯示「No translation returned」（DeepL 免費端點限流）
+- 字典結果按「朗讀」時改為唸英文單字，不再唸中文翻譯（自動朗讀亦同）
 - 「跳至辭典」改為帶入英文單字（輸入的英文，或中日韓輸入的翻譯結果），不再帶入翻譯後的文字
 - 第二目標語言未套用 `zht` / `zhs` 等語言代碼簡寫
 - `cmdpal/build-store.ps1` 適配新版 MSIX 工具鏈的輸出路徑
