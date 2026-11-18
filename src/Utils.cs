@@ -107,7 +107,7 @@ namespace Translator.Utils
         {
             return new StringContent(pairs.ToFormString(), System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
         }
-        public static List<Wox.Plugin.Result> ToResultList(this IEnumerable<ResultItem> src, string iconPath, PluginInitContext pluginInitContext, bool copyOnlyFirstOption = false)
+        public static List<Wox.Plugin.Result> ToResultList(this IEnumerable<ResultItem> src, string iconPath, PluginInitContext pluginInitContext, bool copyOnlyFirstOption = false, string? enterUrl = null)
         {
             return src.Select((item, idx) =>
             {
@@ -116,7 +116,13 @@ namespace Translator.Utils
                     Title = item.Title,
                     SubTitle = item.SubTitle,
                     DisableUsageBasedScoring = true,
-                    Action = item.Action != null ? ((e) =>
+                    Action = enterUrl != null ? ((e) =>
+                    {
+                        // Enter opens the dictionary page; copying is in the context menu.
+                        Wox.Infrastructure.Helper.OpenInShell(enterUrl);
+                        return true;
+                    }) :
+                    item.Action != null ? ((e) =>
                     {
                         return item.Action!(new CustomActionContext
                         {

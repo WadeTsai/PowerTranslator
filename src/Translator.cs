@@ -143,7 +143,12 @@ namespace Translator
                 });
             }
 
-            var query_res = res.ToResultList(this.iconPath, this.pluginContext, !querySearch.Contains(';') && !querySearch.Contains('；'));
+            // Enter opens the Cambridge dictionary page for exactly what the user typed.
+            var enterUrl = string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                SettingHelper.DictionaryUrlPatterns["Cambridge"],
+                Uri.EscapeDataString(querySearch.Trim()));
+            var query_res = res.ToResultList(this.iconPath, this.pluginContext, !querySearch.Contains(';') && !querySearch.Contains('；'), enterUrl);
 
             return query_res;
         }
@@ -196,7 +201,20 @@ namespace Translator
             {
                 new ContextMenuResult
                 {
-                    Title = "Copy (Enter), Subtitle(shift+Enter)",
+                    Title = "Copy (Ctrl+C)",
+                    Action = context=>{
+                        UtilsFun.SetClipboardText((selectedResult.ContextData as ResultItem)?.CopyTgt ?? selectedResult.Title);
+                        return false;
+                    },
+                    Glyph = "èC8",
+                    PluginName="PowerTranslator",
+                    FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+                    AcceleratorKey = System.Windows.Input.Key.C,
+                    AcceleratorModifiers = System.Windows.Input.ModifierKeys.Control
+                },
+                new ContextMenuResult
+                {
+                    Title = "Copy subtitle (Shift+Enter)",
                     Action = context=>{
                         UtilsFun.SetClipboardText(selectedResult.SubTitle);
                         return false;
