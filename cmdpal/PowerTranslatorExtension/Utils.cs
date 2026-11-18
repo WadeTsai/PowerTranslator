@@ -116,13 +116,21 @@ namespace PowerTranslatorExtension.Utils
         public static List<ListItem> ToResultList(
             this IEnumerable<ResultItem> src,
             IconInfo? icon,
-            TranslateHelper? translateHelper = null)
+            TranslateHelper? translateHelper = null,
+            string? enterUrl = null)
         {
             var enableJumpDict = SettingsManager.Instance.EnableJumpDictionary;
             var dictPattern = SettingsManager.Instance.DictionaryUrlPattern;
             return src.Select((item) =>
             {
                 var contextItems = new List<IContextItem>();
+                var copyCommand = new CopyTextCommand(item.CopyTgt ?? item.Title);
+                if (enterUrl != null)
+                {
+                    // Enter opens the dictionary page, so copying moves to the context menu.
+                    copyCommand.Name = Loc.Get("Context_Copy");
+                    contextItems.Add(new CommandContextItem(copyCommand));
+                }
                 if (!string.IsNullOrEmpty(item.SubTitle))
                 {
                     contextItems.Add(new CommandContextItem(new CopyTextCommand(item.SubTitle)
@@ -153,7 +161,7 @@ namespace PowerTranslatorExtension.Utils
                     Title = item.Title,
                     Subtitle = item.SubTitle,
                     Icon = item.icon ?? icon,
-                    Command = new CopyTextCommand(item.CopyTgt ?? item.Title),
+                    Command = enterUrl != null ? new OpenUrlCommand(enterUrl) : copyCommand,
                     MoreCommands = contextItems.ToArray(),
                 };
             }).ToList();

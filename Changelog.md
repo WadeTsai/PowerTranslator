@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-18
+
+### Changed
+- Command Palette：輸入文字後按 Enter 改為在瀏覽器開啟劍橋英文字典（`https://dictionary.cambridge.org/us/dictionary/english/{輸入內容}`）；複製翻譯移到右鍵選單的「複製」
+
 ## [0.13.0] - 2026-10-23
 
 ### Added

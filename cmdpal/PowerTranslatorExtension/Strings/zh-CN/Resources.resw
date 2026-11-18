@@ -84,6 +84,7 @@
 
   <data name="Verb_Open" xml:space="preserve"><value>打开</value></data>
 
+  <data name="Context_Copy" xml:space="preserve"><value>复制</value></data>
   <data name="Context_CopySubtitle" xml:space="preserve"><value>复制副标题</value></data>
   <data name="Context_ReadAloud" xml:space="preserve"><value>朗读</value></data>
   <data name="Context_JumpToDictionary" xml:space="preserve"><value>跳转到词典</value></data>

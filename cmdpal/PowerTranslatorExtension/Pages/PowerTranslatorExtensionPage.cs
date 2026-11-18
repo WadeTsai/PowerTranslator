@@ -171,7 +171,12 @@ internal sealed partial class PowerTranslatorExtensionPage : DynamicListPage, ID
             };
         }
 
-        return res.ToResultList(this.Icon, translateHelper).ToArray<IListItem>();
+        // Enter opens the Cambridge dictionary page for exactly what the user typed.
+        var enterUrl = string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            SettingsManager.DictionaryUrlPatterns["Cambridge"],
+            Uri.EscapeDataString(search.Trim()));
+        return res.ToResultList(this.Icon, translateHelper, enterUrl).ToArray<IListItem>();
     }
 
     private IListItem[] BuildEmptyQueryItems(CancellationToken cancellationToken)
